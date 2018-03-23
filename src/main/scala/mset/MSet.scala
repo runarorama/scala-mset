@@ -6,7 +6,7 @@ import spire.syntax.eq._
 import spire.algebra.Monoid
 import spire.algebra.Eq
 import spire.algebra.MultiplicativeMonoid
-import spire.algebra.AdditiveMonoid
+import spire.algebra.AdditiveSemigroup
 import spire.math.Natural
 import spire.math.Rational
 import spire.std.seq._
@@ -37,8 +37,8 @@ class MSet[M,A](val rep: Map[A,M]) extends AnyVal {
   def foldMap[B](f: (A,M) => B)(implicit B: Monoid[B]): B =
     rep.foldLeft(B.empty) { case (b, (a, m)) => b |+| f(a, m) }
 
-  def insert(a: A)(implicit M: MultiplicativeMonoid[M], S: AdditiveMonoid[M]): MSet[M,A] = {
-    implicit val MM = M.multiplicative
+  def insert(a: A)(implicit M: MultiplicativeMonoid[M], S: AdditiveSemigroup[M]): MSet[M,A] = {
+    implicit val sg = S.additive
     new MSet(MapMonoid[A,M].combine(rep, singleton[M,A](a).rep))
   }
 }
