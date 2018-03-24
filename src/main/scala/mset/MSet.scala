@@ -1,25 +1,29 @@
 package mset
 
-import spire.syntax.monoid._
-import spire.syntax.additiveMonoid._
-import spire.syntax.eq._
-import spire.algebra.Monoid
-import spire.algebra.Eq
-import spire.algebra.MultiplicativeMonoid
 import spire.algebra.AdditiveSemigroup
+import spire.algebra.Eq
+import spire.algebra.Group
+import spire.algebra.Monoid
+import spire.algebra.Rig
+import spire.algebra.MultiplicativeMonoid
+import spire.algebra.MultiplicativeSemigroup
 import spire.math.Natural
 import spire.math.Rational
-import spire.std.seq._
 import spire.std.map._
+import spire.std.seq._
 import spire.std.tuples._
+import spire.syntax.additiveMonoid._
+import spire.syntax.multiplicativeSemigroup._
+import spire.syntax.MultiplicativeSemigroupOps
+import spire.syntax.eq._
+import spire.syntax.monoid._
 
-class MSet[M,A](val rep: Map[A,M]) extends AnyVal {
+class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   import MSet._
 
   /** Get the occurrence list of this MSet */
-  def occurList(implicit E: Eq[M], M: Monoid[M]): List[(A,M)] =
-    rep.toList.filter { case (_, m) => !m.isEmpty }
+  def occurList(implicit M: Monoid[M]): List[(A,M)] = rep.toList
 
   /** Get the multiplicity of a given object */
   def apply(a: A)(implicit M: Monoid[M]): M =
@@ -37,10 +41,44 @@ class MSet[M,A](val rep: Map[A,M]) extends AnyVal {
   def foldMap[B](f: (A,M) => B)(implicit B: Monoid[B]): B =
     rep.foldLeft(B.empty) { case (b, (a, m)) => b |+| f(a, m) }
 
-  def insert(a: A)(implicit M: MultiplicativeMonoid[M], S: AdditiveSemigroup[M]): MSet[M,A] = {
+  /** Insert one occurrence of an object into this MSet */
+  def insert(a: A)(implicit M: MultiplicativeMonoid[M],
+                            S: AdditiveSemigroup[M]): MSet[M,A] = {
     implicit val sg = S.additive
     new MSet(MapMonoid[A,M].combine(rep, singleton[M,A](a).rep))
   }
+
+  /** The size of an MSet is the sum of its multiplicities. */
+  def size(implicit M: Monoid[M]): M =
+    foldMap((_, m) => m)
+
+  /** Modify the occurrences of elements by a function. */
+  def mapOccurs[N](f: M => N): MSet[N,A] = new MSet(rep.mapValues(f))
+
+  /** Scale this MSet by a value. */
+  def scale(n: M)(implicit M: MultiplicativeSemigroup[M]): MSet[M,A] =
+    mapOccurs(_ * n)
+
+  /**
+   * Pass the elements of this MSet to the given function and return the
+   * results as an MSet.
+   */
+  def map[B](f: A => B)(implicit M: Rig[M]): MSet[M,B] = {
+    implicit val additive = M.additive
+    foldMap((a,m) => MSet.singleton(f(a)).scale(m))
+  }
+
+  /**
+   * Pass the elements of this MSet to the given function and collect all
+   * resulting MSets in one MSet.
+   */
+  def flatMap[B](f: A => MSet[M,B])(implicit M: Rig[M]): MSet[M,B] = {
+    implicit val additive = M.additive
+    foldMap((a,m) => f(a) scale m)
+  }
+
+  def ++(m: MSet[M,A])(implicit M: Monoid[M]): MSet[M,A] =
+    new MSet(rep |+| m.rep)
 }
 
 object MSet {
@@ -56,8 +94,7 @@ object MSet {
 
   implicit def msetMonoid[M:Monoid,A]: Monoid[MSet[M,A]] =
     new Monoid[MSet[M,A]] {
-      def combine(a: MSet[M,A], b: MSet[M,A]) =
-        new MSet(a.rep |+| b.rep)
+      def combine(a: MSet[M,A], b: MSet[M,A]) = a ++ b
       val empty = MSet.empty[M,A]
     }
 
