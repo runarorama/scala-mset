@@ -5,6 +5,7 @@ import spire.algebra.Eq
 import spire.algebra.Group
 import spire.algebra.Monoid
 import spire.algebra.Rig
+import spire.algebra.Ring
 import spire.algebra.MultiplicativeMonoid
 import spire.algebra.MultiplicativeSemigroup
 import spire.math.Natural
@@ -14,7 +15,6 @@ import spire.std.seq._
 import spire.std.tuples._
 import spire.syntax.additiveMonoid._
 import spire.syntax.multiplicativeSemigroup._
-import spire.syntax.MultiplicativeSemigroupOps
 import spire.syntax.eq._
 import spire.syntax.monoid._
 
@@ -77,8 +77,14 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     foldMap((a,m) => f(a) scale m)
   }
 
+  /**
+   * Union one MSet with another.
+   */
   def ++(m: MSet[M,A])(implicit M: Monoid[M]): MSet[M,A] =
     new MSet(rep |+| m.rep)
+
+  def negate(implicit M: Ring[M]): MSet[M,A] =
+    mapOccurs(m => m * M.negate(M.one))
 }
 
 object MSet {
@@ -100,7 +106,9 @@ object MSet {
 
   /** Turn an occurrence list into an MSet */
   def fromList[M,A](xs: List[(A,M)])(implicit M: Monoid[M]): MSet[M,A] =
-    new MSet(xs.foldLeft(Map.empty:Map[A,M]) { case (s, (a, m)) => s |+| Map(a -> m) })
+    new MSet(xs.foldLeft(Map.empty:Map[A,M]) {
+      case (s, (a, m)) => s |+| Map(a -> m)
+    })
 
   /** The empty mset */
   def empty[M,A]: MSet[M,A] = new MSet(Map.empty)
