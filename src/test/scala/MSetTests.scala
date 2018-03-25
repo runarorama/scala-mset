@@ -5,6 +5,7 @@ import scalaprops.Gen._
 import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
 import spire.algebra.AdditiveSemigroup
+import spire.math.Natural
 import spire.std.int._
 import spire.syntax.eq._
 
@@ -25,6 +26,14 @@ object MSetTests extends Scalaprops {
     implicit val additive = implicitly[AdditiveMonoid[Int]].additive
 
     (m1 ++ m2).fold(_ * _) == m1.fold(_ * _) + m2.fold(_ * _)
+  }
+
+  val size = forAll { (xs: List[(Int,Int)]) =>
+    fromOccursList(xs).size == xs.map(_._2).sum
+  }
+
+  val toList = forAll { (xs: List[Int]) =>
+    MSet.fromSeq[Natural,Int](xs).toList(identity).sorted == xs.sorted
   }
 
 }

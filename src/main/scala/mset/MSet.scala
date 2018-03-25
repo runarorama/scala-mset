@@ -38,6 +38,12 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   /** Get the values of this MSet as a Set */
   def toSet: Set[A] = rep.keySet
 
+  /** Get the list of values in this MSet */
+  def toList(h: M => Natural): List[A] =
+    foldLeft(List[A]()) {
+      case (as, (a, m)) => List.fill(h(m).toInt)(a) ++ as
+    }
+
   /** Get the multiplicity of a given object */
   def apply(a: A)(implicit M: AdditiveMonoid[M]): M =
     rep get a getOrElse M.zero
@@ -52,7 +58,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   /** Fold an MSet with a monoid */
   def fold[B](f: (A,M) => B)(implicit B: Monoid[B]): B =
-    rep.foldLeft(B.empty) { case (b, (a, m)) => b |+| f(a, m) }
+    foldLeft(B.empty) { case (b, (a, m)) => b |+| f(a, m) }
+
+  def foldLeft[B](z: B)(f: (B, (A,M)) => B): B =
+    rep.foldLeft(z)(f)
+
+  def foldRight[B](z: B)(f: ((A,M), B) => B): B =
+    rep.foldRight(z)(f)
 
   /** Insert one occurrence of an object into this MSet */
   def insert(a: A)(implicit M: MultiplicativeMonoid[M],
