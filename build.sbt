@@ -1,3 +1,7 @@
+scalapropsSettings
+
+scalapropsVersion := "0.5.4"
+
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
