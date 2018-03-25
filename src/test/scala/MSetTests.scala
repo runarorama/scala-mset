@@ -14,7 +14,7 @@ object MSetTests extends Scalaprops {
   import MSet._
 
   implicit def genMSet[M:Gen:AdditiveSemigroup,A:Gen]: Gen[MSet[M,A]] =
-    Gen[List[(A,M)]].map(MSet.fromOccursList[M,A])
+    Gen[List[(A,M)]].map(MSet.fromOccurList[M,A])
 
   val equality = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
     (m1 === m2) ==
@@ -29,11 +29,20 @@ object MSetTests extends Scalaprops {
   }
 
   val size = forAll { (xs: List[(Int,Int)]) =>
-    fromOccursList(xs).size == xs.map(_._2).sum
+    fromOccurList(xs).size == xs.map(_._2).sum
   }
 
   val toList = forAll { (xs: List[Int]) =>
     MSet.fromSeq[Natural,Int](xs).toList(identity).sorted == xs.sorted
+  }
+
+  val product = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
+    val p = (m1 product m2).occurList
+    val as = m1.occurList.toMap
+    val bs = m2.occurList.toMap
+    p.forall {
+      case ((a,b), m) => as(a) * bs(b) == m
+    }
   }
 
 }

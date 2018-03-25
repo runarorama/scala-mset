@@ -22,7 +22,8 @@ import spire.syntax.all._
  *
  * Whereas in a regular Set a given element occurs either zero times or once,
  * in an MSet an element can have multiple occurrences, fractional occurrences,
- * or even negative occurrences.
+ * or the occurrence can be a negative number, an interval, a probability
+ * distribution, or any other type of value.
  *
  * Based on "A new look at multisets" by Norman J Wildberger.
  */
@@ -118,6 +119,16 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    */
   def negate(implicit M: Ring[M]): MSet[M,A] =
     mapOccurs(m => m - M.one)
+
+  /**
+   * The direct product of two MSets. The multiplicity of `(a,b)` in the
+   * result will be the product of the multiplicities of `a` and `b` in
+   * the inputs.
+   */
+  def product[B](m: MSet[M,B])(implicit M: Rig[M]): MSet[M,(A,B)] = for {
+    a <- this
+    b <- m
+  } yield (a,b)
 }
 
 object MSet {
@@ -142,7 +153,7 @@ object MSet {
     msetMonoid[M,A].additive
 
   /** Turn an occurrence list into an MSet */
-  def fromOccursList[M,A](xs: List[(A,M)])(
+  def fromOccurList[M,A](xs: List[(A,M)])(
     implicit M: AdditiveSemigroup[M]): MSet[M,A] = {
       implicit val additive = M.additive
       new MSet(xs.foldLeft(Map.empty:Map[A,M]) {
