@@ -6,6 +6,7 @@ import algebra.Order
 import algebra.ring.AdditiveCommutativeMonoid
 import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
+import algebra.Monoid
 import cats.kernel.OrderFunctions
 import scala.language.higherKinds
 import spire.algebra.Eq
@@ -97,6 +98,12 @@ abstract class Realm[A](implicit A: Eq[A])
       if (a === b) 0
       else if (j === b) -1
       else 1
+    }
+
+    /** The join semilattice of this realm, with identity. */
+    def joinMonoid: Monoid[A] = new Monoid[A] {
+      def combine(x: A, y: A): A = join(x, y)
+      def empty = zero
     }
   }
 

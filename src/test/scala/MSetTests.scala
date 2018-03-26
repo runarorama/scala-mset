@@ -25,7 +25,7 @@ object MSetTests extends Scalaprops {
   val homomorphism = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
     implicit val additive = implicitly[AdditiveMonoid[Int]].additive
 
-    (m1 ++ m2).fold(_ * _) == m1.fold(_ * _) + m2.fold(_ * _)
+    (m1 sum m2).fold(_ * _) == m1.fold(_ * _) + m2.fold(_ * _)
   }
 
   val size = forAll { (xs: List[(Int,Int)]) =>

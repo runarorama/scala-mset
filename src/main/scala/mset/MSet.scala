@@ -1,18 +1,19 @@
 package mset
 
-import spire.algebra.AdditiveSemigroup
 import spire.algebra.AdditiveGroup
+import spire.algebra.AdditiveMonoid
+import spire.algebra.AdditiveSemigroup
 import spire.algebra.Eq
 import spire.algebra.Group
 import spire.algebra.Monoid
-import spire.algebra.Rig
-import spire.algebra.Ring
-import spire.algebra.AdditiveMonoid
 import spire.algebra.MultiplicativeMonoid
 import spire.algebra.MultiplicativeSemigroup
+import spire.algebra.Rig
+import spire.algebra.Ring
 import spire.math.Natural
 import spire.math.Rational
 import spire.std.map._
+import spire.std.MapMonoid
 import spire.std.seq._
 import spire.std.tuples._
 import spire.syntax.all._
@@ -69,9 +70,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   /** Insert one occurrence of an object into this MSet */
   def insert(a: A)(implicit M: MultiplicativeMonoid[M],
-                            S: AdditiveSemigroup[M]): MSet[M,A] = {
-    implicit val sg = S.additive
-    new MSet(MapMonoid[A,M].combine(rep, singleton[M,A](a).rep))
+                            S: AdditiveMonoid[M]): MSet[M,A] =
+    sum(singleton[M,A](a))
+
+  /** Insert n occurrences of an object into this MSet */
+  def insertN(a: A, n: M)(implicit S: AdditiveMonoid[M]): MSet[M,A] = {
+    implicit val additive = S.additive
+    new MSet(MapMonoid[A,M].combine(rep, Map(a -> n)))
   }
 
   /** The size of an MSet is the sum of its multiplicities. */
@@ -106,9 +111,10 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   }
 
   /**
-   * Union one MSet with another.
+   * Union one MSet with another. Also called the "direct sum" of the
+   * two multisets.
    */
-  def ++(m: MSet[M,A])(implicit M: AdditiveMonoid[M]): MSet[M,A] = {
+  def sum(m: MSet[M,A])(implicit M: AdditiveMonoid[M]): MSet[M,A] = {
     implicit val additive = M.additive
     new MSet(rep |+| m.rep)
   }
@@ -129,6 +135,21 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     a <- this
     b <- m
   } yield (a,b)
+
+  /**
+   * The union of two MSets. The multiplicity of an element in the result
+   * will be the join (usually this means the max) of that element in the
+   * two inputs.
+   */
+  def union(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] =
+    new MSet(MapMonoid[A,M](M.joinMonoid).combine(rep, m.rep))
+
+  def intersect(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] = {
+    val ks = rep.keySet intersect m.rep.keySet
+    ks.foldLeft(empty[M,A]) { (nm, k) =>
+      nm.insertN(k, rep(k) meet m.rep(k))
+    }
+  }
 }
 
 object MSet {
@@ -145,7 +166,7 @@ object MSet {
 
   implicit def msetMonoid[M:AdditiveMonoid,A]: AdditiveMonoid[MSet[M,A]] =
     new AdditiveMonoid[MSet[M,A]] {
-      def plus(a: MSet[M,A], b: MSet[M,A]) = a ++ b
+      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
       val zero = MSet.empty[M,A]
     }
 
@@ -162,7 +183,7 @@ object MSet {
   }
 
   def fromSeq[M,A](s: Seq[A])(implicit M: MultiplicativeMonoid[M],
-                                       S: AdditiveSemigroup[M]): MSet[M,A] =
+                                       S: AdditiveMonoid[M]): MSet[M,A] =
     s.foldLeft(empty[M,A])(_ insert _)
 
   /** Turn a sequence of elements into a multiset */
@@ -180,5 +201,12 @@ object MSet {
   /** Construct an mset where the given element occurs once */
   def singleton[M,A](a: A)(implicit M: MultiplicativeMonoid[M]): MSet[M,A] =
     new MSet(Map(a -> M.one))
+
+  implicit def msetRealm[M:Realm,A]: Realm[MSet[M,A]] = new Realm[MSet[M,A]] {
+    def join(a: MSet[M,A], b: MSet[M,A]) = a union b
+    def meet(a: MSet[M,A], b: MSet[M,A]) = a intersect b
+    def zero = empty[M,A]
+    def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
+  }
 
 }

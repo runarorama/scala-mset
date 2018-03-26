@@ -5,6 +5,7 @@ import scalaprops.Gen._
 import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
 import spire.algebra.AdditiveSemigroup
+import spire.algebra.Monoid
 import spire.math.Natural
 import spire.std.int._
 import spire.syntax.eq._
