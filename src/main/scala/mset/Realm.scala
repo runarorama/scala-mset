@@ -8,9 +8,12 @@ import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
 import cats.kernel.OrderFunctions
 import scala.language.higherKinds
-import spire.math.Natural
-import spire.algebra.GCDRing
 import spire.algebra.Eq
+import spire.algebra.GCDRing
+import spire.math.Natural
+import spire.std.boolean._
+import spire.std.tuples._
+import spire.std.unit._
 import spire.syntax.all._
 
 /**
@@ -85,10 +88,17 @@ import spire.syntax.all._
  * }}}
  *
  */
-
-trait Realm[A] extends AdditiveCommutativeMonoid[A]
+abstract class Realm[A](implicit A: Eq[A])
+  extends AdditiveCommutativeMonoid[A]
   with DistributiveLattice[A]
-  with Order[A]
+  with Order[A] {
+    def compare(a: A, b: A) = {
+      val j = join(a,b)
+      if (a === b) 0
+      else if (j === b) -1
+      else 1
+    }
+  }
 
 trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
   with AdditiveMonoidFunctions[R]
@@ -100,29 +110,48 @@ object Realm extends RealmFunctions[Realm] {
 
   @inline final def apply[A](implicit ev: Realm[A]): Realm[A] = ev
 
-  def realm[A:AdditiveCommutativeMonoid:DistributiveLattice:Order] =
+  def realm[A:AdditiveCommutativeMonoid:DistributiveLattice:Eq] = {
+    val L = DistributiveLattice[A]
+    val M = AdditiveMonoid[A]
     new Realm[A] {
-      val L = DistributiveLattice[A]
-      val O = Order[A]
-      val M = AdditiveMonoid[A]
       def meet(a: A, b: A) = L.meet(a,b)
       def join(a: A, b: A) = L.join(a,b)
-      def compare(a: A, b: A) = O.compare(a,b)
-      def plus(a: A, b: A) = M.plus(a,b)
+      def plus(a: A, b: A) = {
+        M.plus(a,b)
+      }
       def zero = M.zero
     }
+  }
+
+  implicit val naturalLattice = new DistributiveLattice[Natural] {
+    def meet(a: Natural, b: Natural) = a min b
+    def join(a: Natural, b: Natural) = a max b
+  }
 
   /** Natural numbers with addition form a realm. */
-  implicit val naturalRealm: Realm[Natural] = realm[Natural]
+  val naturalRealm: Realm[Natural] = realm[Natural]
 
   /** Booleans with disjunction form a realm. */
-  implicit val booleanRealm: Realm[Boolean] = realm[Boolean]
+  val booleanRealm: Realm[Boolean] = realm[Boolean]
 
   /** The trivial realm. */
-  implicit val trivialRealm: Realm[Unit] = realm[Unit]
+  val trivialRealm: Realm[Unit] = new Realm[Unit] {
+    def meet(a: Unit, b: Unit) = ()
+    def join(a: Unit, b: Unit) = ()
+    def plus(a: Unit, b: Unit) = ()
+    def zero = ()
+  }
 
   /** Realms are closed under products. */
-  implicit def realmProduct[A:Realm,B:Realm]: Realm[(A,B)] = realm[(A,B)]
+  def realmProduct[A:Realm,B:Realm]: Realm[(A,B)] = new Realm[(A,B)] {
+    def meet(a: (A,B), b: (A,B)) =
+      (Realm[A].meet(a._1, b._1), Realm[B].meet(a._2, b._2))
+    def join(a: (A,B), b: (A,B)) =
+      (Realm[A].join(a._1, b._1), Realm[B].join(a._2, b._2))
+    def plus(a: (A,B), b: (A,B)) =
+      (Realm[A].plus(a._1, b._1), Realm[B].plus(a._2, b._2))
+    def zero: (A,B) = (Realm[A].zero, Realm[B].zero)
+  }
 
   /**
    * Rings with multiplication and division form a realm with GCD and LCM
@@ -134,12 +163,6 @@ object Realm extends RealmFunctions[Realm] {
     def join(a: A, b: A) = A.lcm(a,b)
     def plus(a: A, b: A) = A.plus(a,b)
     def zero = A.zero
-    def compare(a: A, b: A) = {
-      val j = join(a,b)
-      if (a === b) 0
-      else if (j === b) -1
-      else 1
-    }
   }
 
   def commutativeLaw[A:Realm](a: A, b: A): Boolean =
