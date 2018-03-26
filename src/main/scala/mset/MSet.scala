@@ -209,4 +209,10 @@ object MSet {
     def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
   }
 
+  def msetGroup[M:Ring,A]: Group[MSet[M,A]] = new Group[MSet[M,A]] {
+    def combine(a: MSet[M,A], b: MSet[M,A]) = a sum b
+    def empty = MSet.empty[M,A]
+    def inverse(a: MSet[M,A]) = a.negate
+  }
+
 }

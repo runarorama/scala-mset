@@ -22,7 +22,7 @@ object MSetTests extends Scalaprops {
        m2.toSet.forall(x => m1(x) == m2(x)))
   }
 
-  val homomorphism = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
+  val sumHomomorphism = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
     implicit val additive = implicitly[AdditiveMonoid[Int]].additive
 
     (m1 sum m2).fold(_ * _) == m1.fold(_ * _) + m2.fold(_ * _)
