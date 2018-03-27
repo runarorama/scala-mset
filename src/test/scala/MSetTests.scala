@@ -17,9 +17,6 @@ object MSetTests extends Scalaprops {
   implicit def genMSet[M:Gen:AdditiveMonoid:Eq,A:Gen]: Gen[MSet[M,A]] =
     Gen[List[(A,M)]].map(MSet.fromOccurList[M,A])
 
-  implicit def genNatural: Gen[Natural] =
-    nonNegativeInt.map(Natural(_))
-
   val equality = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
     (m1 === m2) ==
       (m1.toSet.forall(x => m1(x) == m2(x)) &&
@@ -49,8 +46,10 @@ object MSetTests extends Scalaprops {
     }
   }
 
+  import RealmTests._
+
   val msetRealmLaws =
-    RealmTests.realmLaws[MSet[Natural,Natural]](
+    cancellativeRealmLaws[MSet[Natural,Natural]]("MSet Realm")(
       genMSet(genNatural, naturalRealm, Natural.NaturalAlgebra, genNatural),
       msetRealm(naturalRealm, Natural.NaturalAlgebra))
 

@@ -13,16 +13,28 @@ import scalaz.std.string._
 object RealmTests extends Scalaprops {
   import Realm._
 
-  def realmLaws[A:Gen:Realm] = Properties.properties("Realm laws")(
+  def realmLaws[A:Gen:Realm](s: String) = Properties.properties(s)(
     "commutativity" -> forAll(commutativeLaw[A] _),
     "absorption" -> forAll(absorptionLaw[A] _),
     "summation" -> forAll(summationLaw[A] _),
     "identity" -> forAll(identityLaw[A] _),
     "idempotence" -> forAll(idempotentLaw[A] _),
-    "cancellativity" -> forAll(cancellationLaw[A] _),
     "distributivity" -> forAll(distributiveLaw[A] _),
     "associativity" -> forAll(associativeLaw[A] _))
 
-  val natural = realmLaws(nonNegativeInt.map(Natural(_)), naturalRealm)
+  def cancellativeRealmLaws[A:Gen:Realm](s: String) =
+    Properties.fromProps("cancellative realm",
+       realmLaws[A](s),
+       Properties.single("cancellativity", forAll(cancellationLaw[A] _)))
+
+  implicit def genNatural: Gen[Natural] = nonNegativeInt.map(Natural(_))
+
+  val natural = realmLaws("natural")(genNatural, naturalRealm)
+  val boolean = realmLaws("boolean")(genBoolean, booleanRealm)
+  val trivial = realmLaws("trivial")(genUnit, trivialRealm)
+  val product = realmLaws("product")(
+      Gen[(Natural, Natural)],
+      realmProduct[Natural,Natural](naturalRealm, naturalRealm))
+  val gcd = realmLaws("gcd")(choose(0,100), gcdRealm[Int])
 }
 
