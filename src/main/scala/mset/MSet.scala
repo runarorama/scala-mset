@@ -8,6 +8,8 @@ import spire.algebra.Group
 import spire.algebra.Monoid
 import spire.algebra.MultiplicativeMonoid
 import spire.algebra.MultiplicativeSemigroup
+import spire.algebra.lattice.MeetSemilattice
+import spire.algebra.lattice.JoinSemilattice
 import spire.algebra.Rig
 import spire.algebra.Ring
 import spire.math.Natural
@@ -146,14 +148,19 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * will be the join (usually this means the max) of that element in the
    * two inputs.
    */
-  def union(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] =
+  def union(m: MSet[M,A])(implicit L: JoinSemilattice[M],
+                                   M: AdditiveMonoid[M],
+                                   E: Eq[M]): MSet[M,A] =
     new MSet(
-      MapMonoid[A,M](M.joinMonoid)
-        .combine(rep, m.rep)
-        .filterNot(_._2 === M.zero)
+      MapMonoid[A,M](new Monoid[M] {
+        def combine(x: M, y: M) = L.join(x,y)
+        def empty = M.zero
+      }).combine(rep, m.rep).filterNot(_._2 === M.zero)
     )
 
-  def intersect(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] = {
+  def intersect(m: MSet[M,A])(implicit L: MeetSemilattice[M],
+                                       M: AdditiveMonoid[M],
+                                       E: Eq[M]): MSet[M,A] = {
     val ks = rep.keySet intersect m.rep.keySet
     ks.foldLeft(empty[M,A]) { (nm, k) =>
       nm.insertN(k, rep(k) meet m.rep(k))

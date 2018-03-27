@@ -8,6 +8,7 @@ import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
 import algebra.Monoid
 import cats.kernel.OrderFunctions
+import cats.kernel.instances.set._
 import scala.language.higherKinds
 import spire.algebra.Eq
 import spire.algebra.GCDRing
@@ -161,8 +162,8 @@ object Realm extends RealmFunctions[Realm] {
   }
 
   /**
-   * Rings with multiplication and division form a realm with GCD and LCM
-   * as meet and join, respectively.
+   * Rings with multiplication and division sometimes form a realm with GCD
+   * and LCM as meet and join, respectively. E.g. the positive integers.
    */
   def gcdRealm[A:GCDRing:Eq]: Realm[A] = new Realm[A] {
     val A = GCDRing[A]
@@ -170,6 +171,17 @@ object Realm extends RealmFunctions[Realm] {
     def join(a: A, b: A) = A.lcm(a,b)
     def plus(a: A, b: A) = A.times(a,b)
     def zero = A.one
+  }
+
+  /**
+   * The realm of sets is really a specialization of the realm of MSets
+   * with the measures fixed to `Boolean`.
+   */
+  def setRealm[A]: Realm[Set[A]] = new Realm[Set[A]] {
+    def meet(a: Set[A], b: Set[A]) = a intersect b
+    def join(a: Set[A], b: Set[A]) = a union b
+    def plus(a: Set[A], b: Set[A]) = a union b
+    def zero = Set.empty[A]
   }
 
   def commutativeLaw[A:Realm](a: A, b: A): Boolean =

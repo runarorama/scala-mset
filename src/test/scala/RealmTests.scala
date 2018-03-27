@@ -36,5 +36,6 @@ object RealmTests extends Scalaprops {
       Gen[(Natural, Natural)],
       realmProduct[Natural,Natural](naturalRealm, naturalRealm))
   val gcd = realmLaws("gcd")(choose(0,100), gcdRealm[Int])
+  val set = realmLaws("set")(setGen[Int], setRealm[Int])
 }
 
