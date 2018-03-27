@@ -1,10 +1,11 @@
 package mset
 
+import mset.Realm._
 import scalaprops._
 import scalaprops.Gen._
 import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
-import spire.algebra.AdditiveSemigroup
+import spire.algebra.Eq
 import spire.math.Natural
 import spire.std.int._
 import spire.syntax.eq._
@@ -13,8 +14,11 @@ object MSetTests extends Scalaprops {
 
   import MSet._
 
-  implicit def genMSet[M:Gen:AdditiveSemigroup,A:Gen]: Gen[MSet[M,A]] =
+  implicit def genMSet[M:Gen:AdditiveMonoid:Eq,A:Gen]: Gen[MSet[M,A]] =
     Gen[List[(A,M)]].map(MSet.fromOccurList[M,A])
+
+  implicit def genNatural: Gen[Natural] =
+    nonNegativeInt.map(Natural(_))
 
   val equality = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
     (m1 === m2) ==
@@ -44,5 +48,10 @@ object MSetTests extends Scalaprops {
       case ((a,b), m) => as(a) * bs(b) == m
     }
   }
+
+  val msetRealmLaws =
+    RealmTests.realmLaws[MSet[Natural,Natural]](
+      genMSet(genNatural, naturalRealm, Natural.NaturalAlgebra, genNatural),
+      msetRealm(naturalRealm, Natural.NaturalAlgebra))
 
 }

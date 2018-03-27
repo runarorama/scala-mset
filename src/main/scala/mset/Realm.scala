@@ -40,8 +40,8 @@ import spire.syntax.all._
  * == Distributive laws ==
  *
  * {{{
- * k + (m \/ n) ≡ (k + m) \/ (k <> n)
- * k + (m /\ n) ≡ (k + m) /\ (k <> n)
+ * k + (m \/ n) ≡ (k + m) \/ (k + n)
+ * k + (m /\ n) ≡ (k + m) /\ (k + n)
  * k /\ (m \/ n) ≡ (k /\ m) \/ (k /\ n)
  * k \/ (m /\ n) ≡ (k \/ m) /\ (k \/ n)
  * }}}
@@ -168,8 +168,8 @@ object Realm extends RealmFunctions[Realm] {
     val A = GCDRing[A]
     def meet(a: A, b: A) = A.gcd(a,b)
     def join(a: A, b: A) = A.lcm(a,b)
-    def plus(a: A, b: A) = A.plus(a,b)
-    def zero = A.zero
+    def plus(a: A, b: A) = A.times(a,b)
+    def zero = A.one
   }
 
   def commutativeLaw[A:Realm](a: A, b: A): Boolean =

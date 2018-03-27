@@ -74,10 +74,12 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     sum(singleton[M,A](a))
 
   /** Insert n occurrences of an object into this MSet */
-  def insertN(a: A, n: M)(implicit S: AdditiveMonoid[M]): MSet[M,A] = {
-    implicit val additive = S.additive
-    new MSet(MapMonoid[A,M].combine(rep, Map(a -> n)))
-  }
+  def insertN(a: A, n: M)(implicit S: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] =
+    if (n === S.zero) this
+    else {
+      implicit val additive = S.additive
+      new MSet(MapMonoid[A,M].combine(rep, Map(a -> n)))
+    }
 
   /** The size of an MSet is the sum of its multiplicities. */
   def size(implicit M: AdditiveMonoid[M]): M = {
@@ -86,17 +88,20 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   }
 
   /** Modify the occurrences of elements by a function. */
-  def mapOccurs[N](f: M => N): MSet[N,A] = new MSet(rep.mapValues(f))
+  def mapOccurs[N:Eq](f: M => N)(implicit N: AdditiveMonoid[N]): MSet[N,A] =
+    new MSet(rep.mapValues(f).filterNot(_._2 === N.zero))
 
   /** Scale this MSet by a value. */
-  def scale(n: M)(implicit M: MultiplicativeSemigroup[M]): MSet[M,A] =
-    mapOccurs(_ * n)
+  def scale(n: M)(
+    implicit M: MultiplicativeSemigroup[M],
+             N: AdditiveMonoid[M],
+             E: Eq[M]): MSet[M,A] = mapOccurs(_ * n)
 
   /**
    * Pass the elements of this MSet to the given function and return the
    * results as an MSet.
    */
-  def map[B](f: A => B)(implicit M: Rig[M]): MSet[M,B] = {
+  def map[B](f: A => B)(implicit M: Rig[M], E: Eq[M]): MSet[M,B] = {
     implicit val additive = M.additive
     fold((a,m) => MSet.singleton(f(a)).scale(m))
   }
@@ -105,7 +110,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Pass the elements of this MSet to the given function and collect all
    * resulting MSets in one MSet.
    */
-  def flatMap[B](f: A => MSet[M,B])(implicit M: Rig[M]): MSet[M,B] = {
+  def flatMap[B](f: A => MSet[M,B])(implicit M: Rig[M], E: Eq[M]): MSet[M,B] = {
     implicit val additive = M.additive
     fold((a,m) => f(a) scale m)
   }
@@ -123,15 +128,15 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Negate all the occurrences in this MSet.
    * This introduces the idea of a negative multiset.
    */
-  def negate(implicit M: Ring[M]): MSet[M,A] =
-    mapOccurs(m => m - M.one)
+  def negate(implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
+    mapOccurs(M.negate)
 
   /**
    * The direct product of two MSets. The multiplicity of `(a,b)` in the
    * result will be the product of the multiplicities of `a` and `b` in
    * the inputs.
    */
-  def product[B](m: MSet[M,B])(implicit M: Rig[M]): MSet[M,(A,B)] = for {
+  def product[B](m: MSet[M,B])(implicit M: Rig[M], E: Eq[M]): MSet[M,(A,B)] = for {
     a <- this
     b <- m
   } yield (a,b)
@@ -142,7 +147,11 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * two inputs.
    */
   def union(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] =
-    new MSet(MapMonoid[A,M](M.joinMonoid).combine(rep, m.rep))
+    new MSet(
+      MapMonoid[A,M](M.joinMonoid)
+        .combine(rep, m.rep)
+        .filterNot(_._2 === M.zero)
+    )
 
   def intersect(m: MSet[M,A])(implicit M: Realm[M]): MSet[M,A] = {
     val ks = rep.keySet intersect m.rep.keySet
@@ -161,7 +170,7 @@ object MSet {
   implicit def msetEq[M:Eq:AdditiveMonoid,A:Eq]: Eq[MSet[M,A]] =
     new Eq[MSet[M,A]] {
       def eqv(a: MSet[M,A], b: MSet[M,A]) =
-        a.occurList === b.occurList
+        a.rep == b.rep
     }
 
   implicit def msetMonoid[M:AdditiveMonoid,A]: AdditiveMonoid[MSet[M,A]] =
@@ -175,10 +184,11 @@ object MSet {
 
   /** Turn an occurrence list into an MSet */
   def fromOccurList[M,A](xs: List[(A,M)])(
-    implicit M: AdditiveSemigroup[M]): MSet[M,A] = {
+    implicit M: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] = {
       implicit val additive = M.additive
       new MSet(xs.foldLeft(Map.empty:Map[A,M]) {
-        case (s, (a, m)) => s |+| Map(a -> m)
+        case (s, (a, m)) if (M.zero =!= m) => s |+| Map(a -> m)
+        case (s, _) => s
       })
   }
 
@@ -202,17 +212,19 @@ object MSet {
   def singleton[M,A](a: A)(implicit M: MultiplicativeMonoid[M]): MSet[M,A] =
     new MSet(Map(a -> M.one))
 
-  implicit def msetRealm[M:Realm,A]: Realm[MSet[M,A]] = new Realm[MSet[M,A]] {
-    def join(a: MSet[M,A], b: MSet[M,A]) = a union b
-    def meet(a: MSet[M,A], b: MSet[M,A]) = a intersect b
-    def zero = empty[M,A]
-    def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
-  }
+  def msetRealm[M:Realm,A:Eq]: Realm[MSet[M,A]] =
+    new Realm[MSet[M,A]]()(msetEq[M,A]) {
+      def join(a: MSet[M,A], b: MSet[M,A]) = a union b
+      def meet(a: MSet[M,A], b: MSet[M,A]) = a intersect b
+      val zero = empty[M,A]
+      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
+    }
 
-  def msetGroup[M:Ring,A]: Group[MSet[M,A]] = new Group[MSet[M,A]] {
-    def combine(a: MSet[M,A], b: MSet[M,A]) = a sum b
-    def empty = MSet.empty[M,A]
-    def inverse(a: MSet[M,A]) = a.negate
-  }
+  def msetGroup[M:Ring:Eq,A]: AdditiveGroup[MSet[M,A]] =
+    new AdditiveGroup[MSet[M,A]] {
+      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
+      def zero = MSet.empty[M,A]
+      def negate(a: MSet[M,A]) = a.negate
+    }
 
 }
