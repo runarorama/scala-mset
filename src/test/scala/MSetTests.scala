@@ -6,6 +6,7 @@ import scalaprops.Gen._
 import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
 import spire.algebra.Eq
+import spire.algebra.PartialOrder
 import spire.math.Natural
 import spire.std.int._
 import spire.syntax.eq._
@@ -53,4 +54,11 @@ object MSetTests extends Scalaprops {
       genMSet(genNatural, naturalRealm, Natural.NaturalAlgebra, genNatural),
       msetRealm(naturalRealm, Natural.NaturalAlgebra))
 
+  val poInt = PartialOrder[Int]
+
+  val partialOrder = forAll { (m1: MSet[Int, Int], m2: MSet[Int, Int]) =>
+    msetPartialOrder[Int,Int].lteqv(m1, m2) == (m1.toSet ++ m2.toSet).forall {
+      k => poInt.lteqv(m1(k), m2(k))
+    }
+  }
 }

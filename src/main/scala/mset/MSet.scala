@@ -243,18 +243,13 @@ object MSet {
       val P = PartialOrder[M]
       def partialCompare(x: MSet[M,A], y: MSet[M,A]): Double = {
         // The atrocities we commit for performance
-        val xrep = x.rep
-        val yrep = y.rep
-        val xsmall = xrep.size <= yrep.size
-        var these = if (xsmall) xrep else yrep
-        val those = if (xsmall) y else x
+        var these = x.toSet ++ y.toSet
         var sofar = 0.0
         while (!these.isEmpty) {
-          val (a,m) = these.head
+          val k = these.head
           these = these.tail
-          val p = P.partialCompare(m, those(a))
-          if (sofar == 0.0)
-            sofar = p
+          val p = P.partialCompare(x(k), y(k))
+          if (sofar == 0.0) sofar = p
           else if (p.isNaN || p.signum != sofar.signum) return Double.NaN
         }
         sofar
