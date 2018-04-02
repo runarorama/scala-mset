@@ -163,7 +163,8 @@ object Realm extends RealmFunctions[Realm] {
 
   /**
    * Rings with multiplication and division sometimes form a realm with GCD
-   * and LCM as meet and join, respectively. E.g. the positive integers.
+   * and LCM as meet and join, respectively. E.g. the positive rationals and
+   * probability distributions are rings in this way.
    */
   def gcdRealm[A:GCDRing:Eq]: Realm[A] = new Realm[A] {
     val A = GCDRing[A]

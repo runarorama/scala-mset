@@ -5,11 +5,12 @@ import spire.algebra.AdditiveMonoid
 import spire.algebra.AdditiveSemigroup
 import spire.algebra.Eq
 import spire.algebra.Group
+import spire.algebra.lattice.JoinSemilattice
+import spire.algebra.lattice.MeetSemilattice
 import spire.algebra.Monoid
 import spire.algebra.MultiplicativeMonoid
 import spire.algebra.MultiplicativeSemigroup
-import spire.algebra.lattice.MeetSemilattice
-import spire.algebra.lattice.JoinSemilattice
+import spire.algebra.PartialOrder
 import spire.algebra.Rig
 import spire.algebra.Ring
 import spire.math.Natural
@@ -47,6 +48,9 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     foldLeft(List[A]()) {
       case (as, (a, m)) => List.fill(h(m).toInt)(a) ++ as
     }
+
+  /** Check if the given predicate holds for all elements of this MSet. */
+  def forall(p: (A,M) => Boolean): Boolean = rep.forall(p.tupled)
 
   /** Get the multiplicity of a given object */
   def apply(a: A)(implicit M: AdditiveMonoid[M]): M =
@@ -233,5 +237,29 @@ object MSet {
       def zero = MSet.empty[M,A]
       def negate(a: MSet[M,A]) = a.negate
     }
+
+  def msetPartialOrder[M:PartialOrder:AdditiveMonoid,A]: PartialOrder[MSet[M,A]] =
+    new PartialOrder[MSet[M,A]] {
+      val P = PartialOrder[M]
+      def partialCompare(x: MSet[M,A], y: MSet[M,A]): Double = {
+        // The atrocities we commit for performance
+        val xrep = x.rep
+        val yrep = y.rep
+        val xsmall = xrep.size <= yrep.size
+        var these = if (xsmall) xrep else yrep
+        val those = if (xsmall) y else x
+        var sofar = 0.0
+        while (!these.isEmpty) {
+          val (a,m) = these.head
+          these = these.tail
+          val p = P.partialCompare(m, those(a))
+          if (sofar == 0.0)
+            sofar = p
+          else if (p.isNaN || p.signum != sofar.signum) return Double.NaN
+        }
+        sofar
+      }
+    }
+
 
 }
