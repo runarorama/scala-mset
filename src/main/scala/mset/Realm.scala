@@ -89,6 +89,14 @@ import spire.syntax.all._
  * m ≤ n ≡ m \/ n = n
  * }}}
  *
+ * A well-behaved [[Realm]] that has products will allow such products to
+ * distribute over the realm operations:
+ *
+ * {{{
+ * a * (b \/ c) ≡ (a * b) \/ (a * c)
+ * a * (b /\ c) ≡ (a * b) /\ (a * c)
+ * a * (b + c)  ≡ (a * b) + (a * c)
+ * }}}
  */
 abstract class Realm[A](implicit A: Eq[A])
   extends AdditiveCommutativeMonoid[A]
@@ -175,8 +183,8 @@ object Realm extends RealmFunctions[Realm] {
   }
 
   /**
-   * The realm of sets is really a specialization of the realm of MSets
-   * with the measures fixed to `Boolean`.
+   * The realm of sets is a specialization of the realm of MSets with
+   * the measures fixed to `Boolean`.
    */
   def setRealm[A]: Realm[Set[A]] = new Realm[Set[A]] {
     def meet(a: Set[A], b: Set[A]) = a intersect b

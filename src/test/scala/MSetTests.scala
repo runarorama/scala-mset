@@ -9,6 +9,7 @@ import spire.algebra.Eq
 import spire.algebra.PartialOrder
 import spire.math.Natural
 import spire.std.int._
+import spire.std.tuples._
 import spire.syntax.eq._
 
 object MSetTests extends Scalaprops {
@@ -62,4 +63,25 @@ object MSetTests extends Scalaprops {
     }
   }
 
+  // |A + B| = |A| + |B| = |A ∪ B| + |A ∩ B|
+  val sizeHomomorphism = forAll { (a: MSet[Int,Int], b: MSet[Int,Int]) =>
+    (a sum b).size == (a.size + b.size) &&
+    (a.size + b.size) == (a union b).size + (a intersect b).size &&
+    (a.size * b.size) == (a product b).size
+  }
+
+  implicit val E = MSet.msetEq[Natural,(Natural,Natural)]
+  implicit val I = naturalRealm
+  implicit def P[A:Realm,B:Realm] = realmProduct[A,B]
+
+  // Product distributes over realm operations
+  val productDistributive = forAll {
+    (a: MSet[Natural,Natural],
+     b: MSet[Natural,Natural],
+     c: MSet[Natural,Natural]) =>
+      ((a product (b union c)) === ((a product b) union (a product c))) &&
+      ((a product (b intersect c)) ===
+        ((a product b) intersect (a product c))) &&
+      ((a product (b sum c)) === ((a product b) sum (a product c)))
+  }
 }

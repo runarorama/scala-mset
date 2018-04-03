@@ -60,11 +60,14 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   def contains(a: A)(implicit E: Eq[M], M: AdditiveMonoid[M]): Boolean =
     !apply(a).isZero
 
-  /** `a` is from `b` when every element of `a` also occurs in `b` */
+  /**
+   * `a` is from `b` when every element of `a` also occurs in `b`.
+   * This relation forms a partial order on `MSet`s.
+   */
   def isFrom(m: MSet[M,A])(implicit E: Eq[M], M: AdditiveMonoid[M]): Boolean =
     forall((a, _) => m contains a)
 
-  /** Fold an MSet with a monoid */
+  /** Fold an `MSet` with a monoid */
   def fold[B](f: (A,M) => B)(implicit B: Monoid[B]): B =
     foldLeft(B.empty) { case (b, (a, m)) => b |+| f(a, m) }
 
@@ -151,6 +154,9 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * The union of two MSets. The multiplicity of an element in the result
    * will be the join (usually this means the max) of that element in the
    * two inputs.
+   *
+   * For example, if `A = [2 3 1 1]` and `B = [1 3 3 1 1]`,
+   * then `A union B = [2 3 3 1 1 1]`.
    */
   def union(m: MSet[M,A])(implicit L: JoinSemilattice[M],
                                    M: AdditiveMonoid[M],
@@ -162,6 +168,14 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
       }).combine(rep, m.rep).filterNot(_._2 === M.zero)
     )
 
+  /**
+   * The intersection of two `MSet`s. The multiplicity of an element in the
+   * result will be the meet (usually this means the min) of that element in
+   * the two inputs.
+   *
+   * For example, if `A = [2 3 1 1]` and `B = [1 3 3 1 1]`,
+   * then `A intersect B = [3 1 1]`.
+   */
   def intersect(m: MSet[M,A])(implicit L: MeetSemilattice[M],
                                        M: AdditiveMonoid[M],
                                        E: Eq[M]): MSet[M,A] = {
