@@ -62,7 +62,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   /** `a` is from `b` when every element of `a` also occurs in `b` */
   def isFrom(m: MSet[M,A])(implicit E: Eq[M], M: AdditiveMonoid[M]): Boolean =
-    rep.foldLeft(true) { case (b, (a,_)) => b && (m contains a) }
+    forall((a, _) => m contains a)
 
   /** Fold an MSet with a monoid */
   def fold[B](f: (A,M) => B)(implicit B: Monoid[B]): B =

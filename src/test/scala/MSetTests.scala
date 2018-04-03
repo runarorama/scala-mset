@@ -61,4 +61,5 @@ object MSetTests extends Scalaprops {
       k => poInt.lteqv(m1(k), m2(k))
     }
   }
+
 }
