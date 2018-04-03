@@ -49,12 +49,21 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
       case (as, (a, m)) => List.fill(h(m).toInt)(a) ++ as
     }
 
-  /** Check if the given predicate holds for all elements of this MSet. */
+  /** Check if the given predicate holds for all elements of this [[MSet]]. */
   def forall(p: (A,M) => Boolean): Boolean = rep.forall(p.tupled)
 
-  /** Get the multiplicity of a given object */
+  /**
+   * Get the multiplicity of a given object in this [[MSet]].
+   * Alias for [[multiplicity]].
+   */
   def apply(a: A)(implicit M: AdditiveMonoid[M]): M =
     rep get a getOrElse M.zero
+
+  /**
+   * Get the multiplicity of a given object in this [[MSet]].
+   * Alias for [[apply]].
+   */
+  def multiplicity(a: A)(implicit M: AdditiveMonoid[M]): M = apply(a)
 
   /** An object occurs in the MSet if its multiplicity is nonzero */
   def contains(a: A)(implicit E: Eq[M], M: AdditiveMonoid[M]): Boolean =
@@ -139,6 +148,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    */
   def negate(implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
     mapOccurs(M.negate)
+
+  /**
+   * Subtract one MSet from another. For any `x`, the multiplicity
+   * `(a difference b)(x)` will be `a(x) - b(x)`.
+   */
+  def difference(m: MSet[M,A])(
+    implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] = sum(m.negate)
 
   /**
    * The direct product of two MSets. The multiplicity of `(a,b)` in the

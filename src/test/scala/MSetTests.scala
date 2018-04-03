@@ -84,4 +84,9 @@ object MSetTests extends Scalaprops {
         ((a product b) intersect (a product c))) &&
       ((a product (b sum c)) === ((a product b) sum (a product c)))
   }
+
+  val differenceHomomorphism = forAll {
+    (a: MSet[Int,Int], b: MSet[Int,Int], x: Int) =>
+      (a difference b).apply(x) == (a(x) - b(x))
+  }
 }
