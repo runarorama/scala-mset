@@ -152,14 +152,32 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   /**
    * Subtract one MSet from another. For any `x`, the multiplicity
    * `(a difference b)(x)` will be `a(x) - b(x)`.
+   *
+   * For example, if `A = [1 3 3 1 1]` and `B = [2 3 1 1]`,
+   * then `A difference B = [1 (2) 3]`.
    */
   def difference(m: MSet[M,A])(
     implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] = sum(m.negate)
 
   /**
+   * Set theoretic difference. Intersects before subtracting. Not functoral,
+   * and doesn't obey any interesting laws, but is included here as it's a
+   * common operation on multisets.
+   *
+   * For example, if `A = [1 3 3 3 1 1]` and `B = [2 3 1 1]`,
+   * then `A setDifference B = [1 3 3]`.
+   */
+  def setDifference(m: MSet[M,A])(
+    implicit M: MeetSemilattice[M], G: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
+      difference(intersect(m))
+
+  /**
    * The direct product of two MSets. The multiplicity of `(a,b)` in the
    * result will be the product of the multiplicities of `a` and `b` in
    * the inputs.
+   *
+   * For example, if `A = [1 3 1]` and `B = [2 3]`,
+   * then `A product B = [(1,2) (1,2) (1,3) (1,3) (3,2) (3,3)]`.
    */
   def product[B](m: MSet[M,B])(implicit M: Rig[M], E: Eq[M]): MSet[M,(A,B)] = for {
     a <- this
