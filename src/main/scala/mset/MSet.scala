@@ -88,7 +88,8 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   /** Insert one occurrence of an object into this MSet */
   def insert(a: A)(implicit M: MultiplicativeMonoid[M],
-                            S: AdditiveMonoid[M]): MSet[M,A] =
+                            S: AdditiveMonoid[M],
+                            E: Eq[M]): MSet[M,A] =
     sum(singleton[M,A](a))
 
   /** Insert n occurrences of an object into this MSet */
@@ -107,7 +108,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   /** Modify the occurrences of elements by a function. */
   def mapOccurs[N:Eq](f: M => N)(implicit N: AdditiveMonoid[N]): MSet[N,A] =
-    new MSet(rep.mapValues(f).filterNot(_._2 === N.zero))
+    new MSet(rep.mapValues(f))
 
   /** Scale this MSet by a value. */
   def scale(n: M)(
@@ -119,7 +120,10 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Pass the elements of this MSet to the given function and return the
    * results as an MSet.
    */
-  def map[B](f: A => B)(implicit M: Rig[M], E: Eq[M]): MSet[M,B] = {
+  def map[B](f: A => B)(
+    implicit S: MultiplicativeMonoid[M],
+             M: AdditiveMonoid[M],
+             E: Eq[M]): MSet[M,B] = {
     implicit val additive = M.additive
     fold((a,m) => MSet.singleton(f(a)).scale(m))
   }
@@ -128,7 +132,10 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Pass the elements of this MSet to the given function and collect all
    * resulting MSets in one MSet.
    */
-  def flatMap[B](f: A => MSet[M,B])(implicit M: Rig[M], E: Eq[M]): MSet[M,B] = {
+  def flatMap[B](f: A => MSet[M,B])(
+    implicit S: MultiplicativeSemigroup[M],
+             M: AdditiveMonoid[M],
+             E: Eq[M]): MSet[M,B] = {
     implicit val additive = M.additive
     fold((a,m) => f(a) scale m)
   }
@@ -137,7 +144,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Union one MSet with another. Also called the "direct sum" of the
    * two multisets.
    */
-  def sum(m: MSet[M,A])(implicit M: AdditiveMonoid[M]): MSet[M,A] = {
+  def sum(m: MSet[M,A])(implicit M: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] = {
     implicit val additive = M.additive
     new MSet(rep |+| m.rep)
   }
@@ -179,10 +186,14 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * For example, if `A = [1 3 1]` and `B = [2 3]`,
    * then `A product B = [(1,2) (1,2) (1,3) (1,3) (3,2) (3,3)]`.
    */
-  def product[B](m: MSet[M,B])(implicit M: Rig[M], E: Eq[M]): MSet[M,(A,B)] = for {
-    a <- this
-    b <- m
-  } yield (a,b)
+  def product[B](m: MSet[M,B])(
+    implicit M: AdditiveMonoid[M],
+             S: MultiplicativeMonoid[M],
+             E: Eq[M]): MSet[M,(A,B)] =
+    for {
+      a <- this
+      b <- m
+    } yield (a,b)
 
   /**
    * The union of two MSets. The multiplicity of an element in the result
@@ -194,13 +205,12 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    */
   def union(m: MSet[M,A])(implicit L: JoinSemilattice[M],
                                    M: AdditiveMonoid[M],
-                                   E: Eq[M]): MSet[M,A] =
-    new MSet(
-      MapMonoid[A,M](new Monoid[M] {
-        def combine(x: M, y: M) = L.join(x,y)
-        def empty = M.zero
-      }).combine(rep, m.rep).filterNot(_._2 === M.zero)
-    )
+                                   E: Eq[M]): MSet[M,A] = {
+    val ks = toSet ++ m.toSet
+    ks.foldLeft(empty[M,A]) { (nm, k) =>
+      nm.insertN(k, multiplicity(k) join m(k))
+    }
+  }
 
   /**
    * The intersection of two `MSet`s. The multiplicity of an element in the
@@ -213,9 +223,12 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   def intersect(m: MSet[M,A])(implicit L: MeetSemilattice[M],
                                        M: AdditiveMonoid[M],
                                        E: Eq[M]): MSet[M,A] = {
-    val ks = rep.keySet intersect m.rep.keySet
+    // This is not set-theoretic intersection.
+    // We need to consider all the keys, as some multiplicities may be
+    // negative.
+    val ks = toSet ++ m.toSet
     ks.foldLeft(empty[M,A]) { (nm, k) =>
-      nm.insertN(k, rep(k) meet m.rep(k))
+      nm.insertN(k, multiplicity(k) meet m(k))
     }
   }
 }
@@ -232,13 +245,13 @@ object MSet {
         a.rep == b.rep
     }
 
-  implicit def msetMonoid[M:AdditiveMonoid,A]: AdditiveMonoid[MSet[M,A]] =
+  implicit def msetMonoid[M:AdditiveMonoid:Eq,A]: AdditiveMonoid[MSet[M,A]] =
     new AdditiveMonoid[MSet[M,A]] {
       def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
       val zero = MSet.empty[M,A]
     }
 
-  implicit def msetAdditive[M:AdditiveMonoid,A]: Monoid[MSet[M,A]] =
+  implicit def msetAdditive[M:AdditiveMonoid:Eq,A]: Monoid[MSet[M,A]] =
     msetMonoid[M,A].additive
 
   /** Turn an occurrence list into an MSet */
@@ -251,9 +264,9 @@ object MSet {
       })
   }
 
-  def fromSeq[M,A](s: Seq[A])(implicit M: MultiplicativeMonoid[M],
-                                       S: AdditiveMonoid[M]): MSet[M,A] =
-    s.foldLeft(empty[M,A])(_ insert _)
+  def fromSeq[M:MultiplicativeMonoid:AdditiveMonoid:Eq,A](
+    s: Seq[A]): MSet[M,A] =
+      s.foldLeft(empty[M,A])(_ insert _)
 
   /** Turn a sequence of elements into a multiset */
   def multisetFromSeq[A](s: Seq[A]): Multiset[A] = fromSeq(s)

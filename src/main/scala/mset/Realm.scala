@@ -2,17 +2,20 @@ package mset
 
 import algebra.lattice.DistributiveLattice
 import algebra.lattice.{JoinSemilatticeFunctions, MeetSemilatticeFunctions}
+import algebra.Monoid
 import algebra.Order
 import algebra.ring.AdditiveCommutativeMonoid
+import algebra.ring.AdditiveGroup
+import algebra.ring.AdditiveCommutativeGroup
 import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
-import algebra.Monoid
-import cats.kernel.OrderFunctions
+import algebra.ring.MultiplicativeMonoid
+import algebra.ring.MultiplicativeMonoidFunctions
 import cats.kernel.instances.set._
+import cats.kernel.OrderFunctions
 import scala.language.higherKinds
 import spire.algebra.Eq
 import spire.algebra.GCDRing
-import spire.math.Natural
 import spire.std.boolean._
 import spire.std.tuples._
 import spire.std.unit._
@@ -89,14 +92,6 @@ import spire.syntax.all._
  * m ≤ n ≡ m \/ n = n
  * }}}
  *
- * A well-behaved [[Realm]] that has products will allow such products to
- * distribute over the realm operations:
- *
- * {{{
- * a * (b \/ c) ≡ (a * b) \/ (a * c)
- * a * (b /\ c) ≡ (a * b) /\ (a * c)
- * a * (b + c)  ≡ (a * b) + (a * c)
- * }}}
  */
 abstract class Realm[A](implicit A: Eq[A])
   extends AdditiveCommutativeMonoid[A]
@@ -116,11 +111,33 @@ abstract class Realm[A](implicit A: Eq[A])
     }
   }
 
+/**
+ * A well-behaved [[Realm]] that has products will allow such products to
+ * distribute over the realm operations:
+ *
+ * {{{
+ * a * (b \/ c) ≡ (a * b) \/ (a * c)
+ * a * (b /\ c) ≡ (a * b) /\ (a * c)
+ * a * (b + c)  ≡ (a * b) + (a * c)
+ * }}}
+ */
+abstract class RigRealm[A](implicit A: Eq[A]) extends Realm[A]
+  with MultiplicativeMonoid[A]
+
+abstract class RingRealm[A](implicit A: Eq[A]) extends Realm[A]
+  with AdditiveCommutativeGroup[A] with MultiplicativeMonoid[A]
+
 trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
   with AdditiveMonoidFunctions[R]
   with JoinSemilatticeFunctions[R]
   with MeetSemilatticeFunctions[R] {
 }
+
+trait RigRealmFunctions[R[T] <: RigRealm[T]] extends RealmFunctions[R]
+  with MultiplicativeMonoidFunctions[R] {
+}
+
+object RigRealm extends RigRealmFunctions[RigRealm]
 
 object Realm extends RealmFunctions[Realm] {
 
@@ -139,13 +156,74 @@ object Realm extends RealmFunctions[Realm] {
     }
   }
 
-  implicit val naturalLattice = new DistributiveLattice[Natural] {
-    def meet(a: Natural, b: Natural) = a min b
-    def join(a: Natural, b: Natural) = a max b
+  def rigRealm[A:AdditiveCommutativeMonoid
+                :MultiplicativeMonoid
+                :DistributiveLattice
+                :Eq] = {
+    val L = DistributiveLattice[A]
+    val M = AdditiveMonoid[A]
+    val S = MultiplicativeMonoid[A]
+    new RigRealm[A] {
+      def meet(a: A, b: A) = L.meet(a,b)
+      def join(a: A, b: A) = L.join(a,b)
+      def plus(a: A, b: A) = M.plus(a,b)
+      def zero = M.zero
+      def one = S.one
+      def times(a: A, b: A) = S.times(a,b)
+    }
   }
 
-  /** Natural numbers with addition form a realm. */
-  val naturalRealm: Realm[Natural] = realm[Natural]
+  def ringRealm[A:AdditiveGroup
+                 :MultiplicativeMonoid
+                 :DistributiveLattice
+                 :Eq] = {
+    val L = DistributiveLattice[A]
+    val M = AdditiveGroup[A]
+    val S = MultiplicativeMonoid[A]
+    new RingRealm[A] {
+      def meet(a: A, b: A) = L.meet(a,b)
+      def join(a: A, b: A) = L.join(a,b)
+      def plus(a: A, b: A) = M.plus(a,b)
+      def zero = M.zero
+      def one = S.one
+      def times(a: A, b: A) = S.times(a,b)
+      def negate(a: A) = M.negate(a)
+    }
+  }
+
+  type Nat = spire.math.Natural
+  val natAlgebra = spire.math.Natural.NaturalAlgebra
+
+  val naturalLattice = new DistributiveLattice[Nat] {
+    def meet(a: Nat, b: Nat) = natAlgebra.min(a,b)
+    def join(a: Nat, b: Nat) = natAlgebra.max(a,b)
+  }
+
+  /** Natural numbers with addition form a realm. This realm has products. */
+  implicit val naturalRealm: Realm[Nat] = rigRealm[Nat](
+    natAlgebra, natAlgebra, naturalLattice, natAlgebra)
+
+  implicit val intLattice = new DistributiveLattice[Int] {
+    def meet(a: Int, b: Int) = (a:scala.runtime.RichInt) min b
+    def join(a: Int, b: Int) = (a:scala.runtime.RichInt) max b
+  }
+
+  implicit val longLattice = new DistributiveLattice[Long] {
+    def meet(a: Long, b: Long) = (a:scala.runtime.RichLong) min b
+    def join(a: Long, b: Long) = (a:scala.runtime.RichLong) max b
+  }
+
+  implicit val intRealm = ringRealm[Int](
+    spire.std.int.IntAlgebra,
+    spire.std.int.IntAlgebra,
+    intLattice,
+    spire.std.int.IntAlgebra)
+
+  implicit val longRealm = ringRealm[Long](
+    spire.std.long.LongAlgebra,
+    spire.std.long.LongAlgebra,
+    longLattice,
+    spire.std.long.LongAlgebra)
 
   /** Booleans with disjunction form a realm. */
   val booleanRealm: Realm[Boolean] = realm[Boolean]

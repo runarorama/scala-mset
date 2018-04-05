@@ -6,7 +6,6 @@ import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
 import spire.algebra.AdditiveSemigroup
 import spire.math.Natural
-import spire.std.int._
 import spire.syntax.eq._
 import scalaz.std.string._
 
@@ -35,7 +34,10 @@ object RealmTests extends Scalaprops {
   val product = realmLaws("product")(
       Gen[(Natural, Natural)],
       realmProduct[Natural,Natural](naturalRealm, naturalRealm))
-  val gcd = realmLaws("gcd")(choose(0,100), gcdRealm[Int])
+
+  val I = spire.std.int.IntAlgebra
+
+  val gcd = realmLaws("gcd")(choose(0,100), gcdRealm[Int](I,I))
   val set = realmLaws("set")(setGen[Int], setRealm[Int])
 }
 

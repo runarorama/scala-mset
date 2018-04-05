@@ -7,14 +7,13 @@ import scalaprops.Property._
 import spire.algebra.AdditiveMonoid
 import spire.algebra.Eq
 import spire.algebra.PartialOrder
-import spire.math.Natural
-import spire.std.int._
 import spire.std.tuples._
-import spire.syntax.eq._
+import spire.syntax.all._
 
 object MSetTests extends Scalaprops {
 
   import MSet._
+  import Realm._
 
   implicit def genMSet[M:Gen:AdditiveMonoid:Eq,A:Gen]: Gen[MSet[M,A]] =
     Gen[List[(A,M)]].map(MSet.fromOccurList[M,A])
@@ -36,7 +35,7 @@ object MSetTests extends Scalaprops {
   }
 
   val toList = forAll { (xs: List[Int]) =>
-    MSet.fromSeq[Natural,Int](xs).toList(identity).sorted == xs.sorted
+    MSet.fromSeq[Nat,Int](xs).toList(identity).sorted == xs.sorted
   }
 
   val product = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
@@ -51,9 +50,9 @@ object MSetTests extends Scalaprops {
   import RealmTests._
 
   val msetRealmLaws =
-    cancellativeRealmLaws[MSet[Natural,Natural]]("MSet Realm")(
-      genMSet(genNatural, naturalRealm, Natural.NaturalAlgebra, genNatural),
-      msetRealm(naturalRealm, Natural.NaturalAlgebra))
+    cancellativeRealmLaws[MSet[Nat,Nat]]("MSet Realm")(
+      genMSet(genNatural, naturalRealm, naturalRealm, genNatural),
+      msetRealm(naturalRealm, naturalRealm))
 
   val poInt = PartialOrder[Int]
 
@@ -70,15 +69,14 @@ object MSetTests extends Scalaprops {
     (a.size * b.size) == (a product b).size
   }
 
-  implicit val E = MSet.msetEq[Natural,(Natural,Natural)]
-  implicit val I = naturalRealm
+  implicit val E = MSet.msetEq[Nat,(Nat,Nat)]
   implicit def P[A:Realm,B:Realm] = realmProduct[A,B]
 
   // Product distributes over realm operations
   val productDistributive = forAll {
-    (a: MSet[Natural,Natural],
-     b: MSet[Natural,Natural],
-     c: MSet[Natural,Natural]) =>
+    (a: MSet[Nat,Nat],
+     b: MSet[Nat,Nat],
+     c: MSet[Nat,Nat]) =>
       ((a product (b union c)) === ((a product b) union (a product c))) &&
       ((a product (b intersect c)) ===
         ((a product b) intersect (a product c))) &&
@@ -88,5 +86,14 @@ object MSetTests extends Scalaprops {
   val differenceHomomorphism = forAll {
     (a: MSet[Int,Int], b: MSet[Int,Int], x: Int) =>
       (a difference b).apply(x) == (a(x) - b(x))
+  }
+
+  // This law doesn't quite hold for finite signed integer domains,
+  // as e.g. the negation of the smallest `Int` is the identity.
+  val deMorgansLaws = forAll { (ax: MSet[Int,Int], bx: MSet[Int,Int]) =>
+    val a = ax.mapOccurs(_.toLong)
+    val b = bx.mapOccurs(_.toLong)
+    ((a.negate intersect b.negate) === (a union b).negate) &&
+    ((a.negate union b.negate) === (a intersect b).negate)
   }
 }
