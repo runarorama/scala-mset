@@ -6,12 +6,14 @@ import algebra.Monoid
 import algebra.Order
 import algebra.ring.AdditiveCommutativeGroup
 import algebra.ring.AdditiveCommutativeMonoid
+import algebra.ring.AdditiveCommutativeSemigroup
 import algebra.ring.AdditiveGroup
 import algebra.ring.AdditiveGroupFunctions
 import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
 import algebra.ring.AdditiveSemigroup
-import algebra.ring.MultiplicativeGroup
+import algebra.ring.MultiplicativeCommutativeGroup
+import algebra.ring.MultiplicativeCommutativeMonoid
 import algebra.ring.MultiplicativeMonoid
 import algebra.ring.MultiplicativeMonoidFunctions
 import cats.kernel.instances.set._
@@ -114,7 +116,8 @@ abstract class Realm[A](implicit A: Eq[A])
     import Realm.Tropical
 
     val tropical: Tropical[A] =
-      new AdditiveSemigroup[A] with MultiplicativeMonoid[A] {
+      new AdditiveCommutativeSemigroup[A]
+      with MultiplicativeCommutativeMonoid[A] {
         def plus(x: A, y: A): A = self.join(x, y)
         def times(x: A, y: A): A = self.plus(x, y)
         def one: A = self.zero
@@ -137,7 +140,8 @@ abstract class RigRealm[A](implicit A: Eq[A]) extends Realm[A]
     import Realm.Tropical
 
     override val tropical: Tropical[A] =
-      new AdditiveSemigroup[A] with MultiplicativeMonoid[A] {
+      new AdditiveCommutativeSemigroup[A]
+      with MultiplicativeCommutativeMonoid[A] {
         def plus(x: A, y: A): A = self.join(x, y)
         def times(x: A, y: A): A = self.plus(x, y)
         def one: A = self.zero
@@ -159,7 +163,8 @@ abstract class RingRealm[A](implicit A: Eq[A]) extends RigRealm[A]
     import Realm.TropicalField
 
     val tropicalField: TropicalField[A] =
-      new AdditiveSemigroup[A] with MultiplicativeGroup[A] {
+      new AdditiveCommutativeSemigroup[A]
+      with MultiplicativeCommutativeGroup[A] {
         def plus(x: A, y: A): A = self.join(x, y)
         def times(x: A, y: A): A = self.plus(x, y)
         def one: A = self.zero
@@ -184,9 +189,11 @@ trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
    * There is no operation of subtraction, but a value `x` is considered
    * "positive" if `x + 0 = x` and "negative" if `x + 0 = 0`.
    */
-  type Tropical[A] = AdditiveSemigroup[A] with MultiplicativeMonoid[A]
+  type Tropical[A] =
+    AdditiveCommutativeSemigroup[A] with MultiplicativeCommutativeMonoid[A]
 
-  type TropicalField[A] = AdditiveSemigroup[A] with MultiplicativeGroup[A]
+  type TropicalField[A] =
+    AdditiveCommutativeSemigroup[A] with MultiplicativeCommutativeGroup[A]
 }
 
 trait RigRealmFunctions[R[T] <: RigRealm[T]] extends RealmFunctions[R]
