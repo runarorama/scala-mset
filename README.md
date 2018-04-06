@@ -18,7 +18,7 @@ import Realm._
 
 ## Why this?
 
-This type differs from most implementations of multisets in that the multiplicities can be integers (for negative occurrences), rational numbers (for fractional occurrences), intervals and probability distributions (for non-deterministic or "fuzzy" occurrences), or any other type of value. The algebra on that type will determine what operations are available on the `MSet`. In particular, `MSet` provides operations for any type of measure which forms a `Realm`, which this library also provides:
+This type differs from most implementations of multisets in that the multiplicities can be integers (for negative occurrences), rational numbers (for fractional occurrences), intervals and probability distributions (for non-deterministic or "fuzzy" occurrences), or any other type of value. The algebra on that type will determine what operations are available on the `MSet`. In particular, `MSet` provides operations for any type of measure that forms a `Realm`, a type this library also provides:
 
 ``` scala
 trait Realm[A] {
@@ -38,7 +38,7 @@ A `Realm[A]` is a distributive lattice on `A` (through `meet` and `join`), and a
 ``` scala
 m + n ≡ n + m
 m ∨ n ≡ n ∨ m
-m ∧ n ≡ n p m
+m ∧ n ≡ n ∧ m
 ```
 
 ### Associative laws
