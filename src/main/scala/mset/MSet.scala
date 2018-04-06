@@ -35,7 +35,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
 
   import MSet._
 
-  override def toString = "MSet(" + rep.toString + ")"
+  override def toString: String = "MSet(" + rep.toString + ")"
 
   /** Get the occurrence list of this MSet */
   def occurList(implicit M: AdditiveMonoid[M]): List[(A,M)] = rep.toList
@@ -96,13 +96,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   def insertN(a: A, n: M)(implicit S: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] =
     if (n === S.zero) this
     else {
-      implicit val additive = S.additive
+      implicit val additive: Monoid[M] = S.additive
       new MSet(MapMonoid[A,M].combine(rep, Map(a -> n)))
     }
 
   /** The size of an MSet is the sum of its multiplicities. */
   def size(implicit M: AdditiveMonoid[M]): M = {
-    implicit val additive = M.additive
+    implicit val additive: Monoid[M] = M.additive
     fold((_, m) => m)
   }
 
@@ -124,7 +124,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     implicit S: MultiplicativeMonoid[M],
              M: AdditiveMonoid[M],
              E: Eq[M]): MSet[M,B] = {
-    implicit val additive = M.additive
+    implicit val additive: Monoid[M] = M.additive
     fold((a,m) => MSet.singleton(f(a)).scale(m))
   }
 
@@ -136,7 +136,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     implicit S: MultiplicativeSemigroup[M],
              M: AdditiveMonoid[M],
              E: Eq[M]): MSet[M,B] = {
-    implicit val additive = M.additive
+    implicit val additive: Monoid[M] = M.additive
     fold((a,m) => f(a) scale m)
   }
 
@@ -145,7 +145,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * two multisets.
    */
   def sum(m: MSet[M,A])(implicit M: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] = {
-    implicit val additive = M.additive
+    implicit val additive: Monoid[M] = M.additive
     new MSet(rep |+| m.rep)
   }
 
@@ -241,14 +241,14 @@ object MSet {
 
   implicit def msetEq[M:Eq:AdditiveMonoid,A:Eq]: Eq[MSet[M,A]] =
     new Eq[MSet[M,A]] {
-      def eqv(a: MSet[M,A], b: MSet[M,A]) =
-        a.rep == b.rep
+      def eqv(a: MSet[M,A], b: MSet[M,A]): Boolean =
+        a.rep == b.rep // scalafix:ok
     }
 
   implicit def msetMonoid[M:AdditiveMonoid:Eq,A]: AdditiveMonoid[MSet[M,A]] =
     new AdditiveMonoid[MSet[M,A]] {
-      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
-      val zero = MSet.empty[M,A]
+      def plus(a: MSet[M,A], b: MSet[M,A]): MSet[M, A] = a sum b
+      val zero: MSet[M, A] = MSet.empty[M,A]
     }
 
   implicit def msetAdditive[M:AdditiveMonoid:Eq,A]: Monoid[MSet[M,A]] =
@@ -257,7 +257,7 @@ object MSet {
   /** Turn an occurrence list into an MSet */
   def fromOccurList[M,A](xs: List[(A,M)])(
     implicit M: AdditiveMonoid[M], E: Eq[M]): MSet[M,A] = {
-      implicit val additive = M.additive
+      implicit val additive: Monoid[M] = M.additive
       new MSet(xs.foldLeft(Map.empty:Map[A,M]) {
         case (s, (a, m)) if (M.zero =!= m) => s |+| Map(a -> m)
         case (s, _) => s
@@ -286,32 +286,32 @@ object MSet {
 
   def msetRealm[M:Realm,A:Eq]: Realm[MSet[M,A]] =
     new Realm[MSet[M,A]]()(msetEq[M,A]) {
-      def join(a: MSet[M,A], b: MSet[M,A]) = a union b
-      def meet(a: MSet[M,A], b: MSet[M,A]) = a intersect b
-      val zero = empty[M,A]
-      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
+      def join(a: MSet[M,A], b: MSet[M,A]): MSet[M, A] = a union b
+      def meet(a: MSet[M,A], b: MSet[M,A]): MSet[M, A] = a intersect b
+      val zero: MSet[M, A] = empty[M,A]
+      def plus(a: MSet[M,A], b: MSet[M,A]): MSet[M, A] = a sum b
     }
 
   def msetGroup[M:Ring:Eq,A]: AdditiveGroup[MSet[M,A]] =
     new AdditiveGroup[MSet[M,A]] {
-      def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
-      def zero = MSet.empty[M,A]
-      def negate(a: MSet[M,A]) = a.negate
+      def plus(a: MSet[M,A], b: MSet[M,A]): MSet[M, A] = a sum b
+      def zero: MSet[M, A] = MSet.empty[M,A]
+      def negate(a: MSet[M,A]): MSet[M, A] = a.negate
     }
 
   def msetPartialOrder[M:PartialOrder:AdditiveMonoid,A]: PartialOrder[MSet[M,A]] =
     new PartialOrder[MSet[M,A]] {
-      val P = PartialOrder[M]
+      val P: PartialOrder[M] = PartialOrder[M]
       def partialCompare(x: MSet[M,A], y: MSet[M,A]): Double = {
         // The atrocities we commit for performance
-        var these = x.toSet ++ y.toSet
-        var sofar = 0.0
-        while (!these.isEmpty) {
+        var these = x.toSet ++ y.toSet // scalafix:ok
+        var sofar = 0.0 // scalafix:ok
+        while (!these.isEmpty) { // scalafix:ok
           val k = these.head
           these = these.tail
           val p = P.partialCompare(x(k), y(k))
           if (sofar == 0.0) sofar = p
-          else if (p.isNaN || p.signum != sofar.signum) return Double.NaN
+          else if (p.isNaN || p.signum != sofar.signum) return Double.NaN // scalafix:ok
         }
         sofar
       }
