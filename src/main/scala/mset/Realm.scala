@@ -10,6 +10,8 @@ import algebra.ring.AdditiveGroup
 import algebra.ring.AdditiveGroupFunctions
 import algebra.ring.AdditiveMonoid
 import algebra.ring.AdditiveMonoidFunctions
+import algebra.ring.AdditiveSemigroup
+import algebra.ring.MultiplicativeGroup
 import algebra.ring.MultiplicativeMonoid
 import algebra.ring.MultiplicativeMonoidFunctions
 import cats.kernel.instances.set._
@@ -27,54 +29,54 @@ import spire.syntax.all._
  * == Commutative laws ==
  *
  * {{{
- * m + n  ≡ n + m
- * m \/ n ≡ n \/ m
- * m /\ n ≡ n /\ m
+ * m + n ≡ n + m
+ * m ∨ n ≡ n ∨ m
+ * m ∧ n ≡ n p m
  * }}}
  *
  * == Associative laws ==
  *
  * {{{
- * k + (m + n)   ≡ (k + m) + n
- * k \/ (m \/ n) ≡ (k \/ m) \/ n
- * k /\ (m /\ n) ≡ (k /\ m) /\ n
+ * k + (m + n) ≡ (k + m) + n
+ * k ∨ (m ∨ n) ≡ (k ∨ m) ∨ n
+ * k ∧ (m ∧ n) ≡ (k ∧ m) ∧ n
  * }}}
  *
  * == Distributive laws ==
  *
  * {{{
- * k + (m \/ n) ≡ (k + m) \/ (k + n)
- * k + (m /\ n) ≡ (k + m) /\ (k + n)
- * k /\ (m \/ n) ≡ (k /\ m) \/ (k /\ n)
- * k \/ (m /\ n) ≡ (k \/ m) /\ (k \/ n)
+ * k + (m ∨ n) ≡ (k + m) ∨ (k + n)
+ * k + (m ∧ n) ≡ (k + m) ∧ (k + n)
+ * k ∧ (m ∨ n) ≡ (k ∧ m) ∨ (k ∧ n)
+ * k ∨ (m ∧ n) ≡ (k ∨ m) ∧ (k ∨ n)
  * }}}
  *
  * == Identity laws ==
  *
  * {{{
  * zero + m ≡ m
- * zero \/ m ≡ m
- * zero /\ m ≡ mempty
+ * zero ∨ m ≡ m
+ * zero ∧ m ≡ mempty
  * }}}
  *
  * == Absorption laws ==
  *
  * {{{
- * m \/ (m /\ n) ≡ m
- * m /\ (m \/ n) ≡ m
+ * m ∨ (m ∧ n) ≡ m
+ * m ∧ (m ∨ n) ≡ m
  * }}}
  *
  * Idempotent laws
  *
  * {{{
- * m \/ m ≡ m
- * m /\ m ≡ m
+ * m ∨ m ≡ m
+ * m ∧ m ≡ m
  * }}}
  *
  * Summation law
  *
  * {{{
- * (m \/ n) + (m /\ n) ≡ m + n
+ * (m ∨ n) + (m ∧ n) ≡ m + n
  * }}}
  *
  * Some realms may additionally obey a cancellation law, and we call
@@ -88,14 +90,14 @@ import spire.syntax.all._
  * defines an order:
  *
  * {{{
- * m ≤ n ≡ m \/ n = n
+ * m ≤ n ≡ m ∨ n = n
  * }}}
  *
  */
 abstract class Realm[A](implicit A: Eq[A])
   extends AdditiveCommutativeMonoid[A]
   with DistributiveLattice[A]
-  with Order[A] {
+  with Order[A] { self =>
     def compare(a: A, b: A) = {
       val j = join(a,b)
       if (A.eqv(a,b)) 0
@@ -104,32 +106,87 @@ abstract class Realm[A](implicit A: Eq[A])
     }
 
     /** The join semilattice of this realm, with identity. */
-    def joinMonoid: Monoid[A] = new Monoid[A] {
+    val joinMonoid: Monoid[A] = new Monoid[A] {
       def combine(x: A, y: A): A = join(x, y)
       def empty = zero
     }
-  }
+
+    import Realm.Tropical
+
+    val tropical: Tropical[A] =
+      new AdditiveSemigroup[A] with MultiplicativeMonoid[A] {
+        def plus(x: A, y: A): A = self.join(x, y)
+        def times(x: A, y: A): A = self.plus(x, y)
+        def one: A = self.zero
+      }
+    }
 
 /**
  * A well-behaved [[Realm]] that has products will allow such products to
  * distribute over the realm operations:
  *
  * {{{
- * a * (b \/ c) ≡ (a * b) \/ (a * c)
- * a * (b /\ c) ≡ (a * b) /\ (a * c)
- * a * (b + c)  ≡ (a * b) + (a * c)
+ * a * (b ∨ c) ≡ (a * b) ∨ (a * c)
+ * a * (b ∧ c) ≡ (a * b) ∧ (a * c)
+ * a * (b + c) ≡ (a * b) + (a * c)
  * }}}
  */
 abstract class RigRealm[A](implicit A: Eq[A]) extends Realm[A]
-  with MultiplicativeMonoid[A]
+  with MultiplicativeMonoid[A] { self =>
 
+    import Realm.Tropical
+
+    override val tropical: Tropical[A] =
+      new AdditiveSemigroup[A] with MultiplicativeMonoid[A] {
+        def plus(x: A, y: A): A = self.join(x, y)
+        def times(x: A, y: A): A = self.plus(x, y)
+        def one: A = self.zero
+        def pow(x: A, y: A): A = self.times(x, y)
+      }
+}
+
+/**
+ * A [[Realm]] with inverses will obey a De Morgan law:
+ *
+ * {{{
+ * -(a ∨ b) ≡ (-a) ∧ (-b)
+ * -(a ∧ b) ≡ (-a) ∨ (-b)
+ * }}}
+ */
 abstract class RingRealm[A](implicit A: Eq[A]) extends RigRealm[A]
-  with AdditiveCommutativeGroup[A]
+  with AdditiveCommutativeGroup[A] { self =>
+
+    import Realm.TropicalField
+
+    val tropicalField: TropicalField[A] =
+      new AdditiveSemigroup[A] with MultiplicativeGroup[A] {
+        def plus(x: A, y: A): A = self.join(x, y)
+        def times(x: A, y: A): A = self.plus(x, y)
+        def one: A = self.zero
+        def pow(x: A, y: A): A = self.times(x, y)
+        def div(x: A, y: A): A = self.minus(x, y)
+      }
+}
 
 trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
   with AdditiveMonoidFunctions[R]
   with JoinSemilatticeFunctions[R]
   with MeetSemilatticeFunctions[R] {
+
+  /**
+   * A tropical calculus is an additive semigroup with a multiplicative monoid.
+   * Tropical addition satisfies an idempotent property:
+   *
+   * {{{
+   * x + x ≡ x
+   * }}}
+   *
+   * There is no operation of subtraction, but a value `x` is considered
+   * "positive" if `x + 0 = x` and "negative" if `x + 0 = 0`.
+   */
+  type Tropical[A] = AdditiveSemigroup[A] with MultiplicativeMonoid[A]
+
+  type TropicalField[A] = AdditiveSemigroup[A] with MultiplicativeGroup[A]
 }
 
 trait RigRealmFunctions[R[T] <: RigRealm[T]] extends RealmFunctions[R]
