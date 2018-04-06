@@ -1,8 +1,7 @@
 inThisBuild(
   List(
     organization := "com.runar",
-    scalaVersion := "2.12.4",
-    scalafixConfig := Some(file("project/scalafix.conf"))
+    scalaVersion := "2.12.4"
   )
 )
 
