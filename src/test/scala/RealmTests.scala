@@ -32,8 +32,8 @@ object RealmTests extends Scalaprops {
   val boolean = realmLaws("boolean")(genBoolean, booleanRealm)
   val trivial = realmLaws("trivial")(genUnit, trivialRealm)
   val product = realmLaws("product")(
-      Gen[(Natural, Natural)],
-      realmProduct[Natural,Natural](naturalRealm, naturalRealm))
+    Gen[(Natural, Natural)],
+    realmProduct[Natural,Natural](naturalRealm, naturalRealm))
 
   val I = spire.std.int.IntAlgebra
 
