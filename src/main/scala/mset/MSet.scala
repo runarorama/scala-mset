@@ -160,8 +160,8 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * Subtract one MSet from another. For any `x`, the multiplicity
    * `(a difference b)(x)` will be `a(x) - b(x)`.
    *
-   * For example, if `A = [1 3 3 1 1]` and `B = [2 3 1 1]`,
-   * then `A difference B = [1 (2) 3]`.
+   * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
+   * then `A difference B = [(2) 3]`.
    */
   def difference(m: MSet[M,A])(
     implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] = sum(m.negate)
@@ -171,8 +171,8 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * and doesn't obey any interesting laws, but is included here as it's a
    * common operation on multisets.
    *
-   * For example, if `A = [1 3 3 3 1 1]` and `B = [2 3 1 1]`,
-   * then `A setDifference B = [1 3 3]`.
+   * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
+   * then `A setDifference B = [3]`.
    */
   def setDifference(m: MSet[M,A])(
     implicit M: MeetSemilattice[M], G: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
