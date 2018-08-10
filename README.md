@@ -16,7 +16,9 @@ import mset._
 import Realm._
 ```
 
+
 ## Why this?
+
 
 This type differs from most implementations of multisets in that the multiplicities can be integers (for negative occurrences), rational numbers (for fractional occurrences), intervals and probability distributions (for non-deterministic or "fuzzy" occurrences), or any other type of value. The algebra on that type will determine what operations are available on the `MSet`. In particular, `MSet` provides operations for any type of measure that forms a `Realm`, a type this library also provides:
 
@@ -31,7 +33,7 @@ trait Realm[A] {
 
 Notably, `MSet[M,A]` forms a `Realm` for any `Realm[M]`.
 
-A `Realm[A]` is a distributive lattice on `A` (through `meet` and `join`), and a commutative monoid (on `sum` and `zero`). Realms must obey the following laws:
+A `Realm[A]` is a distributive lattice on `A` (through `meet` and `join`), and a commutative monoid (on `sum` and `zero`). Realms must obey the following laws (where `∧` is `meet`, `∨` is `join`, `+` is `sum` and `0` is `zero`):
 
 ### Commutative laws
 
@@ -61,9 +63,9 @@ k ∨ (m ∧ n) ≡ (k ∨ m) ∧ (k ∨ n)
 ### Identity laws
 
 ```
-zero + m ≡ m
-zero ∨ m ≡ m
-zero ∧ m ≡ mempty
+0 + m ≡ m
+0 ∨ m ≡ m
+0 ∧ m ≡ 0 
 ```
 
 ### Absorption laws
@@ -101,7 +103,7 @@ Some realms may additionally obey a cancellation law, and we call
 these _cancellative realms_:
 
 ``` scala
-(k + n = m + n) => (k = m)
+(k + n = m + n) ⇒ (k = m)
 ```
 
 ### Products and inverses
@@ -119,7 +121,7 @@ a * (b + c) ≡ (a * b) + (a * c)
 A realm with inverses must obey a De Morgan law:
 
 ``` scala
--(a ∨ b) ≡ (-a) ∧ (-b)
--(a ∧ b) ≡ (-a) ∨ (-b)
+¬(a ∨ b) ≡ (¬a) ∧ (¬b)
+¬(a ∧ b) ≡ (¬a) ∨ (¬b)
 ```
 
