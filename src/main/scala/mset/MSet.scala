@@ -131,21 +131,6 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
       } yield p ++ m)
     }.map { case xs => fromOccurList(xs) })
 
-
-                         // This haskell is correct:
-                         //
-//powermset = foldr (\(x,n) ps -> ps ++ (ps >>= \m -> [1..n] >>= (\k -> replicate (choose n k) [(x,k)] >>= \p -> [p ++ m]))) [[]]
-
-
-
-                           //    rep.foldRight(singleton(empty[M,A])) { case ((x, n), ps) =>
-//      ps union (ps flatMap { m =>
-//        fromSeq(List.range(M.one, n + M.one)).flatMap { k =>
-//          singleton(singleton(x).scale(k)).scale(choose(n,k)).map(p => p union m)
-//        }
-//      })
-//    }
-
   /** The size of an MSet is the sum of its multiplicities. */
   def size(implicit M: AdditiveMonoid[M]): M = {
     implicit val additive = M.additive
