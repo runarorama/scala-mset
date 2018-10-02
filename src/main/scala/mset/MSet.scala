@@ -1,26 +1,28 @@
 package mset
 
-import spire.algebra.AdditiveGroup
-import spire.algebra.AdditiveMonoid
-import spire.algebra.AdditiveSemigroup
-import spire.algebra.Eq
-import spire.algebra.Group
-import spire.algebra.lattice.JoinSemilattice
-import spire.algebra.lattice.MeetSemilattice
-import spire.algebra.Monoid
-import spire.algebra.MultiplicativeMonoid
-import spire.algebra.MultiplicativeSemigroup
-import spire.algebra.PartialOrder
-import spire.algebra.Rig
-import spire.algebra.Ring
-import spire.algebra.TruncatedDivision
-import spire.math.Natural
-import spire.math.Rational
-import spire.std.map._
-import spire.std.MapMonoid
-import spire.std.seq._
-import spire.std.tuples._
-import spire.syntax.all._
+import  spire.std.MapMonoid
+import  spire.std.long._
+import  spire.std.map._
+import  spire.std.seq._
+import  spire.std.tuples._
+import  spire.algebra.AdditiveGroup
+import  spire.algebra.AdditiveMonoid
+import  spire.algebra.AdditiveSemigroup
+import  spire.algebra.Eq
+import  spire.algebra.EuclideanRing
+import  spire.algebra.Group
+import  spire.algebra.Monoid
+import  spire.algebra.MultiplicativeMonoid
+import  spire.algebra.MultiplicativeSemigroup
+import  spire.algebra.Order
+import  spire.algebra.PartialOrder
+import  spire.algebra.Rig
+import  spire.algebra.Ring
+import  spire.algebra.TruncatedDivision
+import  spire.algebra.lattice.JoinSemilattice
+import  spire.algebra.lattice.MeetSemilattice
+import  spire.math._
+import  spire.syntax.all._
 
 /**
  * An MSet[M,A] is a multiset of values of type A with multiplicities in M.
@@ -120,15 +122,15 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * }}}
    */
   def powerMSet(implicit M: Ring[M],
-                         N: TruncatedDivision[M],
-                         I: Integral[M],
+                         N: EuclideanRing[M],
                          L: JoinSemilattice[M],
-                         E: Eq[M]): MSet[M,MSet[M,A]] =
-    fromSeq(occurList.foldRight(List(List[(A,M)]())) {
+                         E: Eq[M]): MSet[Long,MSet[Long,A]] =
+    fromSeq(occurList.foldRight(List(List[(A,Long)]())) {
       case ((x,n), ps) => ps ++ (for {
         m <- ps
-        k <- List.range(M.one, n + M.one)
-        p <- List.range(M.zero, choose(n, k)).map(_ => List(x -> k))
+        nn = N.euclideanFunction(n).toLong
+        k <- List.range(1L, nn + 1L)
+        p <- List.range(0L, choose(nn, k).toLong).map(_ => List(x -> k))
       } yield p ++ m)
     }.map { case xs => fromOccurList(xs) })
 
@@ -157,7 +159,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
              M: AdditiveMonoid[M],
              E: Eq[M]): MSet[M,B] = {
     implicit val additive = M.additive
-    fold((a,m) => MSet.singleton(f(a)).scale(m))
+    fold((a,m) => MSet.singleton[M,B](f(a)).scale(m))
   }
 
   /**
@@ -348,17 +350,5 @@ object MSet {
         sofar
       }
     }
-
-  /*
-   * Calculate n choose k, the number of ways to pick k elements from a
-   * multiset of size n.
-   */
-  def choose[A:TruncatedDivision:Ring](n: A, k: A): A = {
-    val M = Ring[A]
-    val A = TruncatedDivision[A]
-    if (k == M.zero) M.one
-    else if (n == M.zero) M.zero
-    else choose(n - M.one, k - M.one) * A.fquot(n,k)
-  }
 
 }
