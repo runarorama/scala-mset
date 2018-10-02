@@ -108,14 +108,15 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     difference(singleton[M,A](a))
 
   /**
-   * The power-mset containin all sub-msets of this mset. Contains every
+   * The power-mset containin all sub-msets of this mset, equivalent to the
+   * mset generated from the powerlist of the occurrence list. Contains every
    * combination of elements from this mset, where an object is counted as
    * an element as many times as it occurs in this mset.
    *
    * For example, the `powerMSet` of the mset `[1->2, 2->1]` is
    *
    * {{{
-   * [[]->1, [1->1]->2, [1->2]->1, [2->1]->1, [1->1,2->1]->1, [1->2,2->1]->1]
+   * [[]->1, [1->1]->2, [1->2]->1, [2->1]->1, [1->1,2->1]->2, [1->2,2->1]->1]
    * }}}
    */
   def powerMSet(implicit M: Ring[M],
