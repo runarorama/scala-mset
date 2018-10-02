@@ -13,6 +13,7 @@ import spire.algebra.MultiplicativeSemigroup
 import spire.algebra.PartialOrder
 import spire.algebra.Rig
 import spire.algebra.Ring
+import spire.algebra.TruncatedDivision
 import spire.math.Natural
 import spire.math.Rational
 import spire.std.map._
@@ -99,6 +100,51 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
       implicit val additive = S.additive
       new MSet(MapMonoid[A,M].combine(rep, Map(a -> n)))
     }
+
+  /** Delete an occurrence of an object from this MSet */
+  def delete(a: A)(implicit N: AdditiveGroup[M],
+                            M: MultiplicativeMonoid[M],
+                            E: Eq[M]): MSet[M,A] =
+    difference(singleton[M,A](a))
+
+  /**
+   * The power-mset containin all sub-msets of this mset. Contains every
+   * combination of elements from this mset, where an object is counted as
+   * an element as many times as it occurs in this mset.
+   *
+   * For example, the `powerMSet` of the mset `[1->2, 2->1]` is
+   *
+   * {{{
+   * [[]->1, [1->1]->2, [1->2]->1, [2->1]->1, [1->1,2->1]->1, [1->2,2->1]->1]
+   * }}}
+   */
+  def powerMSet(implicit M: Ring[M],
+                         N: TruncatedDivision[M],
+                         I: Integral[M],
+                         L: JoinSemilattice[M],
+                         E: Eq[M]): MSet[M,MSet[M,A]] =
+    fromSeq(occurList.foldRight(List(List[(A,M)]())) {
+      case ((x,n), ps) => ps ++ (for {
+        m <- ps
+        k <- List.range(M.one, n + M.one)
+        p <- List.range(M.zero, choose(n, k)).map(_ => List(x -> k))
+      } yield p ++ m)
+    }.map { case xs => fromOccurList(xs) })
+
+
+                         // This haskell is correct:
+                         //
+//powermset = foldr (\(x,n) ps -> ps ++ (ps >>= \m -> [1..n] >>= (\k -> replicate (choose n k) [(x,k)] >>= \p -> [p ++ m]))) [[]]
+
+
+
+                           //    rep.foldRight(singleton(empty[M,A])) { case ((x, n), ps) =>
+//      ps union (ps flatMap { m =>
+//        fromSeq(List.range(M.one, n + M.one)).flatMap { k =>
+//          singleton(singleton(x).scale(k)).scale(choose(n,k)).map(p => p union m)
+//        }
+//      })
+//    }
 
   /** The size of an MSet is the sum of its multiplicities. */
   def size(implicit M: AdditiveMonoid[M]): M = {
@@ -317,5 +363,16 @@ object MSet {
       }
     }
 
+  /*
+   * Calculate n choose k, the number of ways to pick k elements from a
+   * multiset of size n.
+   */
+  def choose[A:TruncatedDivision:Ring](n: A, k: A): A = {
+    val M = Ring[A]
+    val A = TruncatedDivision[A]
+    if (k == M.zero) M.one
+    else if (n == M.zero) M.zero
+    else choose(n - M.one, k - M.one) * A.fquot(n,k)
+  }
 
 }
