@@ -223,11 +223,24 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   def product[B](m: MSet[M,B])(
     implicit M: AdditiveMonoid[M],
              S: MultiplicativeMonoid[M],
-             E: Eq[M]): MSet[M,(A,B)] =
+             E: Eq[M]): MSet[M,(A,B)] = productBy(m)((_,_))
+
+  /**
+   * A product of two MSets. The multiplicity of `f(a,b)` in the
+   * result will be the product of the multiplicities of `a` and `b` in
+   * the inputs.
+   *
+   * For example, if `A = [1 3 1]` and `B = [2 3]`,
+   * then `A.productBy(B)(_ + _) = [3 3 4 4 5 6]`.
+   */
+  def productBy[B,C](m: MSet[M,B])(f: (A,B) => C)(
+    implicit M: AdditiveMonoid[M],
+             S: MultiplicativeMonoid[M],
+             E: Eq[M]): MSet[M,C] =
     for {
       a <- this
       b <- m
-    } yield (a,b)
+    } yield f(a,b)
 
   /**
    * The union of two MSets. The multiplicity of an element in the result
