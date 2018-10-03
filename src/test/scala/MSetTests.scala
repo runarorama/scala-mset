@@ -97,4 +97,8 @@ object MSetTests extends Scalaprops {
     ((a.negate union b.negate) === (a intersect b).negate)
   }
 
+  val isEmpty = forAll { (xs: List[Int]) =>
+    MSet.multisetFromSeq(xs).isEmpty == xs.isEmpty
+  }
+
 }

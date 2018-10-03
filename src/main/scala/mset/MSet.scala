@@ -278,6 +278,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
       nm.insertN(k, multiplicity(k) meet m(k))
     }
   }
+
+  private def normal(implicit E: Eq[M], M: AdditiveMonoid[M]): MSet[M,A] =
+    new MSet(rep.filter { case (_, m) => m =!= M.zero })
+
+  /** An mset is empty if for all m:M, multiplicity of m is zero. */
+  def isEmpty(implicit M: AdditiveMonoid[M], E: Eq[M]): Boolean =
+    normal.rep.isEmpty
 }
 
 object MSet {
