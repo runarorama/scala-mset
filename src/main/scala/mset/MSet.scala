@@ -319,11 +319,12 @@ object MSet {
     new MSet(Map(a -> M.one))
 
   def msetRealm[M:Realm,A:Eq]: Realm[MSet[M,A]] =
-    new Realm[MSet[M,A]]()(msetEq[M,A]) {
+    new Realm[MSet[M,A]] {
       def join(a: MSet[M,A], b: MSet[M,A]) = a union b
       def meet(a: MSet[M,A], b: MSet[M,A]) = a intersect b
       val zero = empty[M,A]
       def plus(a: MSet[M,A], b: MSet[M,A]) = a sum b
+      override def eqv(a: MSet[M,A], b: MSet[M,A]) = a === b
     }
 
   def msetGroup[M:Ring:Eq,A]: AdditiveGroup[MSet[M,A]] =

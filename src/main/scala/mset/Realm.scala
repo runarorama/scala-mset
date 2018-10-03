@@ -1,28 +1,26 @@
 package mset
 
-import algebra.lattice.DistributiveLattice
-import algebra.lattice.{JoinSemilatticeFunctions, MeetSemilatticeFunctions}
-import algebra.Monoid
-import algebra.Order
-import algebra.ring.AdditiveCommutativeGroup
-import algebra.ring.AdditiveCommutativeMonoid
-import algebra.ring.AdditiveCommutativeSemigroup
-import algebra.ring.AdditiveGroup
-import algebra.ring.AdditiveGroupFunctions
-import algebra.ring.AdditiveMonoid
-import algebra.ring.AdditiveMonoidFunctions
-import algebra.ring.AdditiveSemigroup
-import algebra.ring.MultiplicativeCommutativeGroup
-import algebra.ring.MultiplicativeCommutativeMonoid
-import algebra.ring.MultiplicativeMonoid
-import algebra.ring.MultiplicativeMonoidFunctions
-import cats.kernel.instances.set._
-import cats.kernel.OrderFunctions
-import scala.language.higherKinds
-import spire.algebra.Eq
-import spire.algebra.GCDRing
-import spire.std.tuples._
-import spire.syntax.all._
+import  spire.std.BooleanStructure
+import  spire.std.IntAlgebra
+import  spire.std.LongAlgebra
+import  spire.std.boolean.BooleanStructure
+import  spire.std.int.IntAlgebra
+import  spire.std.long.LongAlgebra
+import  spire.std.tuples._
+import  algebra.lattice.DistributiveLattice
+import  algebra.lattice.{JoinSemilatticeFunctions, MeetSemilatticeFunctions}
+import  spire.algebra.Eq
+import  spire.algebra.GCDRing
+import  spire.algebra.Rig
+import  spire.algebra.Ring
+import  cats.kernel.OrderFunctions
+import  cats.kernel.instances.set._
+import  scala.language.higherKinds
+import  spire.math.NaturalAlgebra
+import  algebra.ring._
+import  algebra.Monoid
+import  algebra.Order
+import  spire.syntax.all._
 
 /**
  * A realm is an additive monoid and a distributive lattice,
@@ -96,14 +94,15 @@ import spire.syntax.all._
  * }}}
  *
  */
-abstract class Realm[A](implicit A: Eq[A])
+trait Realm[A]
   extends AdditiveCommutativeMonoid[A]
   with DistributiveLattice[A]
-  with Order[A] { self =>
+  with Order[A] { self: Eq[A] =>
+    private implicit val A: Eq[A] = self
     def compare(a: A, b: A) = {
       val j = join(a,b)
-      if (A.eqv(a,b)) 0
-      else if (A.eqv(j,b)) -1
+      if (a === b) 0
+      else if (j === b) -1
       else 1
     }
 
@@ -134,8 +133,8 @@ abstract class Realm[A](implicit A: Eq[A])
  * a * (b + c) ≡ (a * b) + (a * c)
  * }}}
  */
-abstract class RigRealm[A](implicit A: Eq[A]) extends Realm[A]
-  with MultiplicativeMonoid[A] { self =>
+trait RigRealm[A] extends Realm[A] with Rig[A]
+  with MultiplicativeMonoid[A] { self: Eq[A] =>
 
     import Realm.Tropical
 
@@ -157,8 +156,8 @@ abstract class RigRealm[A](implicit A: Eq[A]) extends Realm[A]
  * -(a ∧ b) ≡ (-a) ∨ (-b)
  * }}}
  */
-abstract class RingRealm[A](implicit A: Eq[A]) extends RigRealm[A]
-  with AdditiveCommutativeGroup[A] { self =>
+trait RingRealm[A] extends RigRealm[A] with Ring[A]
+  with AdditiveCommutativeGroup[A] { self: Eq[A] =>
 
     import Realm.TropicalField
 
@@ -267,56 +266,53 @@ object Realm extends RealmFunctions[Realm] {
   type Nat = spire.math.Natural
   val natAlgebra = spire.math.Natural.NaturalAlgebra
 
-  val naturalLattice = new DistributiveLattice[Nat] {
+  trait NaturalLattice extends DistributiveLattice[Nat] {
     def meet(a: Nat, b: Nat) = natAlgebra.min(a,b)
     def join(a: Nat, b: Nat) = natAlgebra.max(a,b)
   }
 
   /** Natural numbers with addition form a realm that has products. */
-  implicit val naturalRealm: Realm[Nat] = rigRealm[Nat](
-    natAlgebra, natAlgebra, naturalLattice, natAlgebra)
+  implicit object NaturalRealm extends NaturalAlgebra
+    with RigRealm[Nat] with NaturalLattice {
+      override def compare(x: Nat, y: Nat): Int =
+        natAlgebra.compare(x, y)
+    }
 
   /** The Int min/max lattice. */
-  implicit val intLattice = new DistributiveLattice[Int] {
+  trait IntLattice extends DistributiveLattice[Int] {
     def meet(a: Int, b: Int) = (a:scala.runtime.RichInt) min b
     def join(a: Int, b: Int) = (a:scala.runtime.RichInt) max b
   }
 
   /** The Long integer min/max lattice. */
-  implicit val longLattice = new DistributiveLattice[Long] {
+  trait LongLattice extends DistributiveLattice[Long] {
     def meet(a: Long, b: Long) = (a:scala.runtime.RichLong) min b
     def join(a: Long, b: Long) = (a:scala.runtime.RichLong) max b
   }
 
   /** Integers with addition form a realm that has products and inverses. */
-  implicit val intRealm = ringRealm[Int](
-    spire.std.int.IntAlgebra,
-    spire.std.int.IntAlgebra,
-    intLattice,
-    spire.std.int.IntAlgebra)
+  implicit object IntRealm extends IntAlgebra with RingRealm[Int] with IntLattice {
+    override def compare(x: Int, y: Int): Int =
+      IntAlgebra.compare(x, y)
+  }
 
   /** Integers with addition form a realm that has products and inverses. */
-  implicit val longRealm = ringRealm[Long](
-    spire.std.long.LongAlgebra,
-    spire.std.long.LongAlgebra,
-    longLattice,
-    spire.std.long.LongAlgebra)
+  implicit object LongRealm extends LongAlgebra
+    with RingRealm[Long] with LongLattice {
+      override def compare(x: Long, y: Long): Int =
+        LongAlgebra.compare(x, y)
+    }
 
   /** Booleans with disjunction form a realm with products and inverses. */
-  implicit val booleanRealm: RingRealm[Boolean] =
-    new RingRealm[Boolean]()(spire.std.boolean.BooleanStructure) {
-      def meet(a: Boolean, b: Boolean) = a && b
-      def join(a: Boolean, b: Boolean) = a || b
-      def plus(a: Boolean, b: Boolean) = a || b
-      def times(a: Boolean, b: Boolean) = a && b
-      def one = true
-      def zero = false
-      def negate(a: Boolean) = !a
-    }
+  implicit object BooleanRealm extends BooleanStructure with RingRealm[Boolean] {
+    override def compare(x: Boolean, y: Boolean): Int =
+      BooleanStructure.compare(x, y)
+    def negate(x: Boolean): Boolean = !x
+  }
 
   /** The trivial realm. */
   implicit val trivialRealm: RingRealm[Unit] =
-    new RingRealm[Unit]()(spire.std.unit.UnitAlgebra) {
+    new RingRealm[Unit] {
       def meet(a: Unit, b: Unit) = ()
       def join(a: Unit, b: Unit) = ()
       def plus(a: Unit, b: Unit) = ()
@@ -324,6 +320,7 @@ object Realm extends RealmFunctions[Realm] {
       def one = ()
       def times(a: Unit, b: Unit) = ()
       def negate(a: Unit) = ()
+      override def eqv(a: Unit, b: Unit) = true
     }
 
   /** Realms are closed under products. */
@@ -335,6 +332,7 @@ object Realm extends RealmFunctions[Realm] {
     def plus(a: (A,B), b: (A,B)) =
       (Realm[A].plus(a._1, b._1), Realm[B].plus(a._2, b._2))
     def zero = (Realm[A].zero, Realm[B].zero)
+    override def eqv(a: (A,B), b: (A,B)) = a._1 === b._1 && a._2 === b._2
   }
 
   /** Realms are closed under products. */
@@ -348,6 +346,7 @@ object Realm extends RealmFunctions[Realm] {
       def one = (RigRealm[A].one, RigRealm[B].one)
       def times(a: (A,B), b: (A,B)) =
         (RigRealm[A].times(a._1, b._1), RigRealm[B].times(a._2, b._2))
+      override def eqv(a: (A,B), b: (A,B)) = a._1 === b._1 && a._2 === b._2
     }
   }
 
@@ -363,6 +362,7 @@ object Realm extends RealmFunctions[Realm] {
       def times(a: (A,B), b: (A,B)) = R.times(a,b)
       def negate(a: (A,B)) =
         (RingRealm[A].negate(a._1), RingRealm[B].negate(a._2))
+      override def eqv(a: (A,B), b: (A,B)) = a._1 === b._1 && a._2 === b._2
     }
   }
 
@@ -377,6 +377,7 @@ object Realm extends RealmFunctions[Realm] {
     def join(a: A, b: A) = A.lcm(a,b)
     def plus(a: A, b: A) = A.times(a,b)
     def zero = A.one
+    override def eqv(a: A, b: A) = Eq[A].eqv(a,b)
   }
 
   /**
@@ -388,6 +389,7 @@ object Realm extends RealmFunctions[Realm] {
     def join(a: Set[A], b: Set[A]) = a union b
     def plus(a: Set[A], b: Set[A]) = a union b
     def zero = Set.empty[A]
+    override def eqv(a: Set[A], b: Set[A]) = a == b
   }
 
   def commutativeLaw[A:Realm](a: A, b: A): Boolean =

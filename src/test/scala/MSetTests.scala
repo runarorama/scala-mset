@@ -51,8 +51,8 @@ object MSetTests extends Scalaprops {
 
   val msetRealmLaws =
     cancellativeRealmLaws[MSet[Nat,Nat]]("MSet Realm")(
-      genMSet(genNatural, naturalRealm, naturalRealm, genNatural),
-      msetRealm(naturalRealm, naturalRealm))
+      genMSet(genNatural, NaturalRealm, NaturalRealm, genNatural),
+      msetRealm(NaturalRealm, NaturalRealm))
 
   val poInt = PartialOrder[Int]
 
@@ -96,4 +96,5 @@ object MSetTests extends Scalaprops {
     ((a.negate intersect b.negate) === (a union b).negate) &&
     ((a.negate union b.negate) === (a intersect b).negate)
   }
+
 }

@@ -28,12 +28,12 @@ object RealmTests extends Scalaprops {
 
   implicit def genNatural: Gen[Natural] = nonNegativeInt.map(Natural(_))
 
-  val natural = realmLaws("natural")(genNatural, naturalRealm)
-  val boolean = realmLaws("boolean")(genBoolean, booleanRealm)
+  val natural = realmLaws("natural")(genNatural, NaturalRealm)
+  val boolean = realmLaws("boolean")(genBoolean, BooleanRealm)
   val trivial = realmLaws("trivial")(genUnit, trivialRealm)
   val product = realmLaws("product")(
     Gen[(Natural, Natural)],
-    realmProduct[Natural,Natural](naturalRealm, naturalRealm))
+    realmProduct[Natural,Natural](NaturalRealm, NaturalRealm))
 
   val I = spire.std.int.IntAlgebra
 
