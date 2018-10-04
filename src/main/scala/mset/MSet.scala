@@ -89,6 +89,15 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   def foldRight[B](z: B)(f: ((A,M), B) => B): B =
     rep.foldRight(z)(f)
 
+  /**
+   * Find all the elements that match a given predicate.
+   */
+  def filter(f: A => Boolean)(implicit N: AdditiveGroup[M],
+                                       E: Eq[M]): MSet[M,A] =
+    foldRight(this) {
+      case ((a,_), r) => if (f(a)) r else r deleteAll a
+    }
+
   /** Insert one occurrence of an object into this MSet */
   def insert(a: A)(implicit M: MultiplicativeMonoid[M],
                             S: AdditiveMonoid[M],
@@ -108,6 +117,10 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
                             M: MultiplicativeMonoid[M],
                             E: Eq[M]): MSet[M,A] =
     difference(singleton[M,A](a))
+
+  /** Delete all occurrences of an object from this MSet */
+  def deleteAll(a: A)(implicit N: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
+    difference(MSet.fromOccurList(List(a -> multiplicity(a))))
 
   /**
    * The power-mset containin all sub-msets of this mset, equivalent to the

@@ -101,4 +101,8 @@ object MSetTests extends Scalaprops {
     MSet.multisetFromSeq(xs).isEmpty == xs.isEmpty
   }
 
+  val filter = forAll { (xs: MSet[Int,Int], n: Int) =>
+    !xs.filter(_ != n).contains(n)
+  }
+
 }
