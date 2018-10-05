@@ -182,10 +182,7 @@ trait RingRealm[A] extends MRealm[A] with RigRealm[A] with Ring[A]
  * with the symbol `∸`.
  *
  * The monus `a ∸ b` is the smallest `c` such that `a ≤ b + c`. In other words,
- * it is an adjoint functor to the addition operator `+`.
- *
- * If the monus is left adjoint, then this is a left m-realm. If it's a right
- * adjoint, then it's a right m-realm.
+ * it is left adjoint to the commutative monoid operator `+`.
  */
 trait MRealm[A] extends Realm[A] { self: Eq[A] =>
   def monus(x: A, y: A): A
