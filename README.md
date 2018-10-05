@@ -146,5 +146,5 @@ a ∧ (b + (a ∸ b)) ≡ a
 That is, `monus(a,b)` is the smallest object which when added to `b` is at
 least `a`.
 
-Examples of monus operations include truncated subtraction on natural numbers, the quotient operation on integers, and the difference operation on sets.
+Examples of monus operations include truncated subtraction on natural numbers, the quotient operation on integers, and the difference operation on sets and multisets.
 
