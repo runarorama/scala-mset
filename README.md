@@ -90,7 +90,7 @@ m ∧ m ≡ m
 
 ### Partial order
 
-[[Realm]] extends [[spire.algebra.Order]] because any join semilattice
+`Realm` extends `spire.algebra.Order` because any join semilattice
 defines an order:
 
 ``` scala
