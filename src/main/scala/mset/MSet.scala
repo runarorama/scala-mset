@@ -92,8 +92,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
   /**
    * Find all the elements that match a given predicate.
    */
-  def filter(f: A => Boolean)(implicit N: AdditiveGroup[M],
-                                       E: Eq[M]): MSet[M,A] =
+  def filter(f: A => Boolean)(implicit N: MRealm[M], E: Eq[M]): MSet[M,A] =
     foldRight(this) {
       case ((a,_), r) => if (f(a)) r else r deleteAll a
     }
@@ -113,13 +112,13 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     }
 
   /** Delete an occurrence of an object from this MSet */
-  def delete(a: A)(implicit N: AdditiveGroup[M],
+  def delete(a: A)(implicit N: MRealm[M],
                             M: MultiplicativeMonoid[M],
                             E: Eq[M]): MSet[M,A] =
     difference(singleton[M,A](a))
 
   /** Delete all occurrences of an object from this MSet */
-  def deleteAll(a: A)(implicit N: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
+  def deleteAll(a: A)(implicit N: MRealm[M], E: Eq[M]): MSet[M,A] =
     difference(MSet.fromOccurList(List(a -> multiplicity(a))))
 
   /**
@@ -210,8 +209,11 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
    * then `A difference B = [(2) 3]`.
    */
-  def difference(m: MSet[M,A])(
-    implicit M: AdditiveGroup[M], E: Eq[M]): MSet[M,A] = sum(m.negate)
+  def difference(m: MSet[M,A])(implicit M: MRealm[M], E: Eq[M]): MSet[M,A] =
+    new MSet(m.foldLeft(rep) { case (r, (a, m)) =>
+      val newm = M.monus(multiplicity(a), m)
+      if (newm === M.zero) r - a else r + (a -> newm)
+    })
 
   /**
    * Set theoretic difference. Intersects before subtracting. Not functoral,
@@ -221,8 +223,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
    * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
    * then `A setDifference B = [3]`.
    */
-  def setDifference(m: MSet[M,A])(
-    implicit M: MeetSemilattice[M], G: AdditiveGroup[M], E: Eq[M]): MSet[M,A] =
+  def setDifference(m: MSet[M,A])(implicit M: MRealm[M], E: Eq[M]): MSet[M,A] =
       difference(intersect(m))
 
   /**
