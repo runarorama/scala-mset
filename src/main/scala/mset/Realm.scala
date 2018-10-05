@@ -10,7 +10,7 @@ import  spire.std.tuples._
 import  algebra.lattice.DistributiveLattice
 import  algebra.lattice.{JoinSemilatticeFunctions, MeetSemilatticeFunctions}
 import  spire.algebra.Eq
-import  spire.algebra.GCDRing
+import  spire.algebra.EuclideanRing
 import  spire.algebra.Rig
 import  spire.algebra.Ring
 import  cats.kernel.OrderFunctions
@@ -156,20 +156,32 @@ trait RigRealm[A] extends Realm[A] with Rig[A]
  * -(a ∧ b) ≡ (-a) ∨ (-b)
  * }}}
  */
-trait RingRealm[A] extends RigRealm[A] with Ring[A]
+trait RingRealm[A] extends MRealm[A] with RigRealm[A] with Ring[A]
   with AdditiveCommutativeGroup[A] { self: Eq[A] =>
+    def monus(x: A, y: A): A = minus(x, y)
 
-    import Realm.TropicalField
+  import Realm.TropicalField
 
-    val tropicalField: TropicalField[A] =
-      new AdditiveCommutativeSemigroup[A]
-      with MultiplicativeCommutativeGroup[A] {
-        def plus(x: A, y: A): A = self.join(x, y)
-        def times(x: A, y: A): A = self.plus(x, y)
-        def one: A = self.zero
-        def pow(x: A, y: A): A = self.times(x, y)
-        def div(x: A, y: A): A = self.minus(x, y)
-      }
+  val tropicalField: TropicalField[A] =
+    new AdditiveCommutativeSemigroup[A]
+    with MultiplicativeCommutativeGroup[A] {
+      def plus(x: A, y: A): A = self.join(x, y)
+      def times(x: A, y: A): A = self.plus(x, y)
+      def one: A = self.zero
+      def pow(x: A, y: A): A = self.times(x, y)
+      def div(x: A, y: A): A = self.minus(x, y)
+    }
+}
+
+/**
+ * An [[MRealm]] is a realm equipped with a monus operator, sometimes written
+ * with the symbol `∸`.
+ *
+ * The monus `a ∸ b` is the smallest `c` such that `a ≤ b + c`. In other words,
+ * it is an adjoint functor to the addition operator `+`.
+ */
+trait MRealm[A] extends Realm[A] { self: Eq[A] =>
+  def monus(x: A, y: A): A
 }
 
 trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
@@ -273,9 +285,10 @@ object Realm extends RealmFunctions[Realm] {
 
   /** Natural numbers with addition form a realm that has products. */
   implicit object NaturalRealm extends NaturalAlgebra
-    with RigRealm[Nat] with NaturalLattice {
+    with MRealm[Nat] with RigRealm[Nat] with NaturalLattice {
       override def compare(x: Nat, y: Nat): Int =
         natAlgebra.compare(x, y)
+      def monus(x: Nat, y: Nat) = if (x <= y) zero else x - y
     }
 
   /** The Int min/max lattice. */
@@ -367,16 +380,17 @@ object Realm extends RealmFunctions[Realm] {
   }
 
   /**
-   * Rings with multiplication and division sometimes form a realm with GCD
-   * and LCM as meet and join, respectively. E.g. the positive rationals and
-   * probability distributions are rings in this way.
+   * Euclidean rings with multiplication and division sometimes form a realm
+   * with GCD and LCM as meet and join, respectively. E.g. the positive
+   * rationals and probability distributions are rings in this way.
    */
-  def gcdRealm[A:GCDRing:Eq]: Realm[A] = new Realm[A] {
-    val A = GCDRing[A]
+  def euclideanRealm[A:EuclideanRing:Eq]: MRealm[A] = new MRealm[A] {
+    val A = EuclideanRing[A]
     def meet(a: A, b: A) = A.gcd(a,b)
     def join(a: A, b: A) = A.lcm(a,b)
     def plus(a: A, b: A) = A.times(a,b)
     def zero = A.one
+    def monus(a: A, b: A) = A.equot(a,b)
     override def eqv(a: A, b: A) = Eq[A].eqv(a,b)
   }
 
@@ -384,11 +398,12 @@ object Realm extends RealmFunctions[Realm] {
    * The realm of sets is a specialization of the realm of MSets with
    * the measures fixed to `Boolean`.
    */
-  def setRealm[A]: Realm[Set[A]] = new Realm[Set[A]] {
+  def setRealm[A]: MRealm[Set[A]] = new MRealm[Set[A]] {
     def meet(a: Set[A], b: Set[A]) = a intersect b
     def join(a: Set[A], b: Set[A]) = a union b
     def plus(a: Set[A], b: Set[A]) = a union b
     def zero = Set.empty[A]
+    def monus(a: Set[A], b: Set[A]) = a diff b
     override def eqv(a: Set[A], b: Set[A]) = a == b
   }
 
@@ -424,4 +439,7 @@ object Realm extends RealmFunctions[Realm] {
 
   def cancellationLaw[A:Realm](a: A, b: A, c: A): Boolean =
     (a + c =!= b + c) || a === b
+
+  def monusLaw[A:MRealm](a: A, b: A, c: A): Boolean =
+    implicitly[MRealm[A]].monus(a, b) <= c == (a <= b + c)
 }

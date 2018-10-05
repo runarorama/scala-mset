@@ -21,6 +21,10 @@ object RealmTests extends Scalaprops {
     "distributivity" -> forAll(distributiveLaw[A] _),
     "associativity" -> forAll(associativeLaw[A] _))
 
+  def mrealmLaws[A:Gen:MRealm](s: String) = Properties.properties(s)(
+    "adjunction" -> forAll(monusLaw[A] _)
+  ) product realmLaws[A](s)
+
   def cancellativeRealmLaws[A:Gen:Realm](s: String) =
     Properties.fromProps("cancellative realm",
        realmLaws[A](s),
@@ -28,7 +32,7 @@ object RealmTests extends Scalaprops {
 
   implicit def genNatural: Gen[Natural] = nonNegativeInt.map(Natural(_))
 
-  val natural = realmLaws("natural")(genNatural, NaturalRealm)
+  val natural = mrealmLaws("natural")(genNatural, NaturalRealm)
   val boolean = realmLaws("boolean")(genBoolean, BooleanRealm)
   val trivial = realmLaws("trivial")(genUnit, trivialRealm)
   val product = realmLaws("product")(
@@ -37,7 +41,7 @@ object RealmTests extends Scalaprops {
 
   val I = spire.std.int.IntAlgebra
 
-  val gcd = realmLaws("gcd")(choose(0,100), gcdRealm[Int](I,I))
-  val set = realmLaws("set")(setGen[Int], setRealm[Int])
+  val gcd = realmLaws("euclidean")(choose(0,100), euclideanRealm[Int](I,I))
+  val set = mrealmLaws("set")(setGen[Int], setRealm[Int])
 }
 
