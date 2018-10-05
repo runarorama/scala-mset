@@ -13,13 +13,13 @@ import  spire.algebra.Eq
 import  spire.algebra.EuclideanRing
 import  spire.algebra.Rig
 import  spire.algebra.Ring
-import  cats.kernel.OrderFunctions
+import  cats.kernel.PartialOrderFunctions
 import  cats.kernel.instances.set._
 import  scala.language.higherKinds
 import  spire.math.NaturalAlgebra
 import  algebra.ring._
 import  algebra.Monoid
-import  algebra.Order
+import  algebra.PartialOrder
 import  spire.syntax.all._
 
 /**
@@ -86,8 +86,8 @@ import  spire.syntax.all._
  * (k + n = m + n) => (k = m)
  * }}}
  *
- * [[Realm]] extends [[spire.algebra.Order]] because any join semilattice
- * defines an order:
+ * [[Realm]] extends [[spire.algebra.PartialOrder]] because any join semilattice
+ * defines a partial order:
  *
  * {{{
  * m ≤ n ≡ m ∨ n = n
@@ -97,13 +97,17 @@ import  spire.syntax.all._
 trait Realm[A]
   extends AdditiveCommutativeMonoid[A]
   with DistributiveLattice[A]
-  with Order[A] { self: Eq[A] =>
+  with PartialOrder[A] { self: Eq[A] =>
     private implicit val A: Eq[A] = self
-    def compare(a: A, b: A) = {
+
+    // a ≤ b ≡ a ∨ b = b
+    def partialCompare(a: A, b: A) = {
       val j = join(a,b)
-      if (a === b) 0
-      else if (j === b) -1
-      else 1
+      if (j === b)
+        if (j === a) 0
+        else -1
+      else if (j === a) 1
+      else Double.NaN
     }
 
     /** The join semilattice of this realm, with identity. */
@@ -179,12 +183,15 @@ trait RingRealm[A] extends MRealm[A] with RigRealm[A] with Ring[A]
  *
  * The monus `a ∸ b` is the smallest `c` such that `a ≤ b + c`. In other words,
  * it is an adjoint functor to the addition operator `+`.
+ *
+ * If the monus is left adjoint, then this is a left m-realm. If it's a right
+ * adjoint, then it's a right m-realm.
  */
 trait MRealm[A] extends Realm[A] { self: Eq[A] =>
   def monus(x: A, y: A): A
 }
 
-trait RealmFunctions[R[T] <: Realm[T]] extends OrderFunctions[R]
+trait RealmFunctions[R[T] <: Realm[T]] extends PartialOrderFunctions[R]
   with AdditiveMonoidFunctions[R]
   with JoinSemilatticeFunctions[R]
   with MeetSemilatticeFunctions[R] {
@@ -286,7 +293,7 @@ object Realm extends RealmFunctions[Realm] {
   /** Natural numbers with addition form a realm that has products. */
   implicit object NaturalRealm extends NaturalAlgebra
     with MRealm[Nat] with RigRealm[Nat] with NaturalLattice {
-      override def compare(x: Nat, y: Nat): Int =
+      override def partialCompare(x: Nat, y: Nat) =
         natAlgebra.compare(x, y)
       def monus(x: Nat, y: Nat) = if (x <= y) zero else x - y
     }
@@ -305,20 +312,20 @@ object Realm extends RealmFunctions[Realm] {
 
   /** Integers with addition form a realm that has products and inverses. */
   implicit object IntRealm extends IntAlgebra with RingRealm[Int] with IntLattice {
-    override def compare(x: Int, y: Int): Int =
+    override def partialCompare(x: Int, y: Int) =
       IntAlgebra.compare(x, y)
   }
 
   /** Integers with addition form a realm that has products and inverses. */
   implicit object LongRealm extends LongAlgebra
     with RingRealm[Long] with LongLattice {
-      override def compare(x: Long, y: Long): Int =
+      override def partialCompare(x: Long, y: Long) =
         LongAlgebra.compare(x, y)
     }
 
   /** Booleans with disjunction form a realm with products and inverses. */
   implicit object BooleanRealm extends BooleanStructure with RingRealm[Boolean] {
-    override def compare(x: Boolean, y: Boolean): Int =
+    override def partialCompare(x: Boolean, y: Boolean) =
       BooleanStructure.compare(x, y)
     def negate(x: Boolean): Boolean = !x
   }
@@ -380,9 +387,11 @@ object Realm extends RealmFunctions[Realm] {
   }
 
   /**
-   * Euclidean rings with multiplication and division sometimes form a realm
+   * Algebras with multiplication and division sometimes form a realm
    * with GCD and LCM as meet and join, respectively. E.g. the positive
-   * rationals and probability distributions are rings in this way.
+   * rationals and probability distributions are realms in this way.
+   *
+   * The multiplication has a monus, which removes common prime factors.
    */
   def euclideanRealm[A:EuclideanRing:Eq]: MRealm[A] = new MRealm[A] {
     val A = EuclideanRing[A]
@@ -390,7 +399,7 @@ object Realm extends RealmFunctions[Realm] {
     def join(a: A, b: A) = A.lcm(a,b)
     def plus(a: A, b: A) = A.times(a,b)
     def zero = A.one
-    def monus(a: A, b: A) = A.equot(a,b)
+    def monus(a: A, b: A) = A.equot(a, A.gcd(a,b))
     override def eqv(a: A, b: A) = Eq[A].eqv(a,b)
   }
 
@@ -440,6 +449,9 @@ object Realm extends RealmFunctions[Realm] {
   def cancellationLaw[A:Realm](a: A, b: A, c: A): Boolean =
     (a + c =!= b + c) || a === b
 
-  def monusLaw[A:MRealm](a: A, b: A, c: A): Boolean =
+  def leftMonusLaw[A:MRealm](a: A, b: A, c: A): Boolean =
     implicitly[MRealm[A]].monus(a, b) <= c == (a <= b + c)
+
+  def rightMonusLaw[A:MRealm](a: A, b: A, c: A): Boolean =
+    implicitly[MRealm[A]].monus(a, b) >= c == (a >= b + c)
 }
