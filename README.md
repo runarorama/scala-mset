@@ -127,7 +127,8 @@ A realm with inverses must obey a De Morgan law:
 
 ### M-Realms and monus
 
-An `MRealm` is a realm with a partial additive inverse called `monus`. Every `RingRealm` is an `MRealm`, where the partial inverse happens to be exact. This inverse is a kind of _truncated_ or _residuated_ subtraction.
+An `MRealm` is a realm with a partial additive inverse called `monus`. Every `RingRealm` is an `MRealm`, where the monus happens to be exact. A monus operation 
+is a kind of _truncated_ or _residuated_ subtraction.
 
 The monus must be left adjoint to the addition:
 
