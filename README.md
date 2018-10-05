@@ -127,13 +127,20 @@ A realm with inverses must obey a De Morgan law:
 
 ### M-Realms and monus
 
-An `MRealm` is a realm with a partial additive inverse called `monus`. Every `RingRealm` is an `MRealm`, where the monus happens to be exact. A monus operation 
+An `MRealm` is a realm with a partial additive inverse called `monus` or `∸`. Every `RingRealm` is an `MRealm`, where the monus happens to be exact. A monus operation 
 is a kind of _truncated_ or _residuated_ subtraction.
 
 The monus must be left adjoint to the addition:
 
 ``` scala
-monus(a,b) ≤ c ≡ a ≤ b + c
+a ∸ b ≤ c ≡ a ≤ b + c
+```
+
+In terms of the `meet` and `join`, that means:
+
+``` scala
+a ∧ (b + (a ∸ b)) ≡ a
+((b + c) ∸ b) ∨ c ≡ c
 ```
 
 That is, `monus(a,b)` is the smallest object which when added to `b` is at
