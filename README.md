@@ -108,7 +108,7 @@ these _cancellative realms_:
 
 ### Products and inverses
 
-Two `Realm` subtypes are also provided which are `RigRealm` (realms with products) and `RingRealm` (realms with products and additive inverses).
+Two `Realm` subtypes with products are also provided which are `RigRealm` (realms with products) and `RingRealm` (realms with products and additive inverses).
 
 A well-behaved realm with products requires products to distribute over the realm operations:
 
@@ -124,4 +124,19 @@ A realm with inverses must obey a De Morgan law:
 ¬(a ∨ b) ≡ (¬a) ∧ (¬b)
 ¬(a ∧ b) ≡ (¬a) ∨ (¬b)
 ```
+
+### M-Realms and monus
+
+An `MRealm` is a realm with a partial additive inverse called `monus`. Every `RingRealm` is an `MRealm`, where the partial inverse happens to be exact. This inverse is a kind of _truncated_ or _residuated_ subtraction.
+
+The monus must be left adjoint to the addition:
+
+``` scala
+monus(a,b) ≤ c ≡ a ≤ b + c
+```
+
+That is, `monus(a,b)` is the smallest object which when added to `b` is at
+least `a`.
+
+Examples of monus operations include truncated subtraction on natural numbers, the quotient operation on integers, and the difference operation on sets.
 
