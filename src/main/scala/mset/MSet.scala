@@ -122,7 +122,7 @@ class MSet[M,A](private val rep: Map[A,M]) extends AnyVal {
     difference(MSet.fromOccurList(List(a -> multiplicity(a))))
 
   /**
-   * The power-mset containin all sub-msets of this mset, equivalent to the
+   * The power-mset containing all sub-msets of this mset, equivalent to the
    * mset generated from the powerlist of the occurrence list. Contains every
    * combination of elements from this mset, where an object is counted as
    * an element as many times as it occurs in this mset.
