@@ -19,7 +19,7 @@ import  scala.language.higherKinds
 import  spire.math.NaturalAlgebra
 import  algebra.ring._
 import  algebra.Monoid
-import  algebra.PartialOrder
+import  cats.kernel.PartialOrder
 import  spire.syntax.all._
 
 /**
@@ -86,7 +86,7 @@ import  spire.syntax.all._
  * (k + n = m + n) => (k = m)
  * }}}
  *
- * [[Realm]] extends [[spire.algebra.PartialOrder]] because any join semilattice
+ * [[Realm]] extends `PartialOrder` because any join semilattice
  * defines a partial order:
  *
  * {{{
