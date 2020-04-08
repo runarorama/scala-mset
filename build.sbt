@@ -1,6 +1,6 @@
 inThisBuild(
   List(
-    organization := "com.runar",
+    organization := "com.higher-order",
     scalaVersion := "2.12.11"
   )
 )
