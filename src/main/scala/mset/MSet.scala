@@ -37,7 +37,7 @@ import scala.language.higherKinds
   *
   * Based on "A new look at multisets" by Norman J Wildberger.
   */
-class MSet[M, A](private val rep: Map[A, M]) {
+class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
 
   import MSet._
 
