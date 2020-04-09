@@ -51,10 +51,13 @@ class MSet[M, A](private val rep: Map[A, M]) {
   /** Get the values of this MSet as a Set */
   def toSet: Set[A] = rep.keySet
 
-  /** Get the list of values in this MSet */
-  def toList(h: M => Natural): List[A] =
-    foldLeft(List[A]()) {
-      case (as, (a, m)) => List.fill(h(m).toInt)(a) ++ as
+  /**
+   * Get the list of values in this MSet. Only defined if the measure `M` is
+   * isomorphic to the natural numbers. That is, if this mset is a Multiset.
+   */
+  def toList(implicit E: MSet[M,A] =:= Multiset[A]): List[A] =
+    E(this).foldLeft(List[A]()) {
+      case (as, (a, m)) => List.fill(m.toInt)(a) ++ as
     }
 
   /** Check if the given predicate holds for all elements of this [[MSet]]. */
@@ -285,15 +288,19 @@ class MSet[M, A](private val rep: Map[A, M]) {
     * Given a function which has an effect, thread the effect through applying
     * this function on all the values in this mset, collecting the results in
     * an mset in the context of the effect.
+    *
+    * Only defined if the measure `M` is isomorphic to the natural numbers,
+    * that is if this mset is a Multiset.
     */
   def traverse[F[_]: Applicative, B](
-      f: A => F[B])(implicit E: Eq[M], M: AdditiveMonoid[M]): F[MSet[M, B]] = {
+      f: A => F[B])(implicit E: MSet[M,A] =:= Multiset[A]): F[Multiset[B]] = {
+    import cats.implicits._
     val F = Applicative[F]
-    foldLeft(F.pure(empty[M, B])) {
+    E(this).foldLeft(F.pure(empty[Natural, B])) {
       case (acc, (a, m)) =>
-        Applicative[F].map2(acc, F.map(f(a))(b => (b, m))) {
-          case (mset, (b, m)) =>
-            mset.insertN(b, m)
+        Applicative[F].map2(acc, List.fill(m.toInt)(f(a)).traverse(x => x)) {
+          case (mset, bs) =>
+            mset.sum(Multiset(bs:_*))
         }
     }
   }
