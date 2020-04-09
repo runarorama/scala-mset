@@ -37,7 +37,7 @@ import scala.language.higherKinds
   *
   * Based on "A new look at multisets" by Norman J Wildberger.
   */
-class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
+class MSet[M, A](private val rep: Map[A, M]) {
 
   import MSet._
 
@@ -134,7 +134,7 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
 
   /** Modify the occurrences of elements by a function. */
   def mapOccurs[N: Eq](f: M => N)(implicit N: AdditiveMonoid[N]): MSet[N, A] =
-    new MSet(rep.mapValues(f))
+    new MSet(rep.view.mapValues(f).toMap)
 
   /** Scale this MSet by a value. */
   def scale(n: M)(implicit M: MultiplicativeSemigroup[M],
@@ -396,7 +396,7 @@ object MSet {
           these = these.tail
           val p = P.partialCompare(x(k), y(k))
           if (sofar == 0.0) sofar = p
-          else if (p.isNaN || p.signum != sofar.signum) return Double.NaN
+          else if (p.isNaN || p.sign != sofar.sign) return Double.NaN
         }
         sofar
       }
