@@ -52,10 +52,10 @@ class MSet[M, A](private val rep: Map[A, M]) {
   def toSet: Set[A] = rep.keySet
 
   /**
-   * Get the list of values in this MSet. Only defined if the measure `M` is
-   * isomorphic to the natural numbers. That is, if this mset is a Multiset.
-   */
-  def toList(implicit E: MSet[M,A] =:= Multiset[A]): List[A] =
+    * Get the list of values in this MSet. Only defined if the measure `M` is
+    * isomorphic to the natural numbers. That is, if this mset is a Multiset.
+    */
+  def toList(implicit E: MSet[M, A] =:= Multiset[A]): List[A] =
     E(this).foldLeft(List[A]()) {
       case (as, (a, m)) => List.fill(m.toInt)(a) ++ as
     }
@@ -292,16 +292,20 @@ class MSet[M, A](private val rep: Map[A, M]) {
     * Only defined if the measure `M` is isomorphic to the natural numbers,
     * that is if this mset is a Multiset.
     */
-  def traverse[F[_]: Applicative, B](
-      f: A => F[B])(implicit E: MSet[M,A] =:= Multiset[A]): F[Multiset[B]] = {
+  def traverse[F[_]: Applicative, B](f: A => F[B])(
+      implicit E: MSet[M, A] =:= Multiset[A]): F[Multiset[B]] = {
+    def iterate[A](a: A, n: Int)(f: A => A): A =
+      if (n < 1) a
+      else {
+        val x = f(a)
+        iterate(x, n - 1)(f)
+      }
     import cats.implicits._
     val F = Applicative[F]
     E(this).foldLeft(F.pure(empty[Natural, B])) {
       case (acc, (a, m)) =>
-        Applicative[F].map2(acc, List.fill(m.toInt)(f(a)).traverse(x => x)) {
-          case (mset, bs) =>
-            mset.sum(Multiset(bs:_*))
-        }
+        iterate(acc, m.toInt)(
+          Applicative[F].map2(_, f(a))((x, y) => x insert y))
     }
   }
 }
@@ -328,19 +332,20 @@ object MSet {
   implicit def msetAdditive[M: AdditiveMonoid: Eq, A]: Monoid[MSet[M, A]] =
     msetMonoid[M, A].additive
 
-  implicit def msetMonad[M:MultiplicativeMonoid:AdditiveMonoid:Eq] =
-    new Monad[MSet[M,?]] {
-      override def pure[A](a: A) = empty[M,A] insert a
-      override def flatMap[A,B](m: MSet[M,A])(f: A => MSet[M,B]) = m flatMap f
-      override def tailRecM[A,B](a: A)(f: A => MSet[M, Either[A,B]]) = {
+  implicit def msetMonad[M: MultiplicativeMonoid: AdditiveMonoid: Eq] =
+    new Monad[MSet[M, ?]] {
+      override def pure[A](a: A) = empty[M, A] insert a
+      override def flatMap[A, B](m: MSet[M, A])(f: A => MSet[M, B]) =
+        m flatMap f
+      override def tailRecM[A, B](a: A)(f: A => MSet[M, Either[A, B]]) = {
         @annotation.tailrec
-        def go(remain: List[(Either[A,B],M)], acc: MSet[M,B]): MSet[M,B] =
+        def go(remain: List[(Either[A, B], M)], acc: MSet[M, B]): MSet[M, B] =
           remain match {
-            case Nil => acc
+            case Nil                => acc
             case (Right(b), m) :: t => go(t, acc.insertN(b, m))
-            case (Left(a), m) :: t => go(f(a).occurList, acc)
+            case (Left(a), m) :: t  => go(f(a).occurList, acc)
           }
-        go(f(a).occurList, empty[M,B])
+        go(f(a).occurList, empty[M, B])
       }
     }
 
@@ -414,6 +419,8 @@ object MSet {
 object Multiset {
   import MSet.Multiset
   def apply[A](as: A*): Multiset[A] = MSet.fromSeq(as)
+
+  def empty[A]: Multiset[A] = MSet.empty[Natural, A]
 
   /**
     * The power-multiset containing all sub-msets of the given mset, equivalent
