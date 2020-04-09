@@ -1,5 +1,7 @@
 package mset
 
+import cats.Applicative
+import cats.Monad
 import spire.std.MapMonoid
 import spire.std.long._
 import spire.std.map._
@@ -23,6 +25,7 @@ import spire.algebra.lattice.JoinSemilattice
 import spire.algebra.lattice.MeetSemilattice
 import spire.math._
 import spire.syntax.all._
+import scala.language.higherKinds
 
 /**
   * An MSet[M,A] is a multiset of values of type A with multiplicities in M.
@@ -122,35 +125,6 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
   /** Delete all occurrences of an object from this MSet */
   def deleteAll(a: A)(implicit N: MRealm[M], E: Eq[M]): MSet[M, A] =
     difference(MSet.fromOccurList(List(a -> multiplicity(a))))
-
-  /**
-    * The power-mset containing all sub-msets of this mset, equivalent to the
-    * mset generated from the powerlist of the occurrence list. Contains every
-    * combination of elements from this mset, where an object is counted as
-    * an element as many times as it occurs in this mset.
-    *
-    * For example, the `powerMSet` of the mset `[1->2, 2->1]` is
-    *
-    * {{{
-    * [[]->1, [1->1]->2, [1->2]->1, [2->1]->1, [1->1,2->1]->2, [1->2,2->1]->1]
-    * }}}
-    */
-  def powerMSet(implicit M: Ring[M],
-                N: EuclideanRing[M],
-                L: JoinSemilattice[M],
-                E: Eq[M]): MSet[Long, MSet[Long, A]] =
-    fromSeq(
-      occurList
-        .foldRight(List(List[(A, Long)]())) {
-          case ((x, n), ps) =>
-            ps ++ (for {
-              m <- ps
-              nn = N.euclideanFunction(n).toLong
-              k <- List.range(1L, nn + 1L)
-              p <- List.range(0L, choose(nn, k).toLong).map(_ => List(x -> k))
-            } yield p ++ m)
-        }
-        .map { case xs => fromOccurList(xs) })
 
   /** The size of an MSet is the sum of its multiplicities. */
   def size(implicit M: AdditiveMonoid[M]): M = {
@@ -306,6 +280,23 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
   /** An mset is empty if for all m:M, multiplicity of m is zero. */
   def isEmpty(implicit M: AdditiveMonoid[M], E: Eq[M]): Boolean =
     normal.rep.isEmpty
+
+  /**
+    * Given a function which has an effect, thread the effect through applying
+    * this function on all the values in this mset, collecting the results in
+    * an mset in the context of the effect.
+    */
+  def traverse[F[_]: Applicative, B](
+      f: A => F[B])(implicit E: Eq[M], M: AdditiveMonoid[M]): F[MSet[M, B]] = {
+    val F = Applicative[F]
+    foldLeft(F.pure(empty[M, B])) {
+      case (acc, (a, m)) =>
+        Applicative[F].map2(acc, F.map(f(a))(b => (b, m))) {
+          case (mset, (b, m)) =>
+            mset.insertN(b, m)
+        }
+    }
+  }
 }
 
 object MSet {
@@ -329,6 +320,22 @@ object MSet {
 
   implicit def msetAdditive[M: AdditiveMonoid: Eq, A]: Monoid[MSet[M, A]] =
     msetMonoid[M, A].additive
+
+  implicit def msetMonad[M:MultiplicativeMonoid:AdditiveMonoid:Eq] =
+    new Monad[MSet[M,?]] {
+      override def pure[A](a: A) = empty[M,A] insert a
+      override def flatMap[A,B](m: MSet[M,A])(f: A => MSet[M,B]) = m flatMap f
+      override def tailRecM[A,B](a: A)(f: A => MSet[M, Either[A,B]]) = {
+        @annotation.tailrec
+        def go(remain: List[(Either[A,B],M)], acc: MSet[M,B]): MSet[M,B] =
+          remain match {
+            case Nil => acc
+            case (Right(b), m) :: t => go(t, acc.insertN(b, m))
+            case (Left(a), m) :: t => go(f(a).occurList, acc)
+          }
+        go(f(a).occurList, empty[M,B])
+      }
+    }
 
   /** Turn an occurrence list into an MSet */
   def fromOccurList[M, A](xs: List[(A, M)])(implicit M: AdditiveMonoid[M],
@@ -394,9 +401,38 @@ object MSet {
         sofar
       }
     }
+
 }
 
 object Multiset {
   import MSet.Multiset
   def apply[A](as: A*): Multiset[A] = MSet.fromSeq(as)
+
+  /**
+    * The power-multiset containing all sub-msets of the given mset, equivalent
+    * to the mset generated from the powerlist of the occurrence list. Contains
+    * every combination of elements from this mset, where an object is counted
+    * as an element as many times as it occurs in this mset.
+    *
+    * For example, the `powerMSet` of the mset `[1->2, 2->1]` is
+    *
+    * {{{
+    * [[]->1, [1->1]->2, [1->2]->1, [2->1]->1, [1->1,2->1]->2, [1->2,2->1]->1]
+    * }}}
+    */
+  def powerMSet[A](m: Multiset[A]): Multiset[Multiset[A]] =
+    MSet.fromSeq(
+      m.occurList
+        .foldRight(List(List[(A, Natural)]())) {
+          case ((x, n), ps) =>
+            ps ++ (for {
+              m <- ps
+              k <- List.range(Natural.one + 0, n + 1)
+              p <- List
+                .range(Natural.zero + 0, choose(n.longValue, k.toLong))
+                .map(_ => List(x -> Natural(k)))
+            } yield p ++ m)
+        }
+        .map { case xs => MSet.fromOccurList(xs) })
+
 }

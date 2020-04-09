@@ -5,8 +5,10 @@ inThisBuild(
   )
 )
 
+addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
+
 name := "MSet"
-version := "0.2.1"
+version := "0.4.0"
 libraryDependencies += "org.typelevel" %% "spire" % "0.16.2"
 libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
 scalapropsSettings
