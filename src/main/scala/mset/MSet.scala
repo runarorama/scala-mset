@@ -43,6 +43,34 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
 
   override def toString = "MSet(" + rep.toString + ")"
 
+  /**
+   * An mset `m1` is smaller than an mset `m2` if for every `x`, there are fewer
+   * occurrences of `x` in `m1` than in `m2`.
+   */
+  def <(other: MSet[M,A])(implicit O: PartialOrder[M], M: AdditiveMonoid[M]) =
+    msetPartialOrder[M,A].lt(this, other)
+
+  /**
+   * An mset `m1` is "at most" `m2` if for every `x`, there are no more
+   * occurrences of `x` in `m1` than there are in `m2`.
+   */
+  def <=(other: MSet[M,A])(implicit O: PartialOrder[M], M: AdditiveMonoid[M]) =
+    msetPartialOrder[M,A].lteqv(this, other)
+
+  /**
+   * An mset `m1` is greater than an mset `m2` if for every `x`, there are more
+   * occurrences of `x` in `m1` than there are in `m2`.
+   */
+  def >(other: MSet[M,A])(implicit O: PartialOrder[M], M: AdditiveMonoid[M]) =
+    msetPartialOrder[M,A].gt(this, other)
+
+  /**
+   * An mset `m1` is "at least" `m2` if for every `x`, there are at least as
+   * many occurrences of `x` in `m1` as there are in `m2`.
+   */
+  def >=(other: MSet[M,A])(implicit O: PartialOrder[M], M: AdditiveMonoid[M]) =
+    msetPartialOrder[M,A].gteqv(this, other)
+
   /** Get the occurrence list of this MSet */
   def occurList(implicit M: AdditiveMonoid[M]): List[(A, M)] = rep.toList
 
@@ -187,8 +215,8 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
     * Subtract one MSet from another. For any `x`, the multiplicity
     * `(a difference b)(x)` will be `a(x) - b(x)`.
     *
-    * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
-    * then `A difference B = [(2) 3]`.
+    * For example, if `A = [2 3 3 1 1]` and `B = [3 3 3 1]`,
+    * then `A difference B = [2 1]`.
     */
   def difference(m: MSet[M, A])(implicit M: MRealm[M], E: Eq[M]): MSet[M, A] =
     new MSet(m.foldLeft(rep) {
@@ -202,8 +230,8 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
     * and doesn't obey any interesting laws, but is included here as it's a
     * common operation on multisets.
     *
-    * For example, if `A = [3 3 1 1]` and `B = [2 3 1 1]`,
-    * then `A setDifference B = [3]`.
+    * For example, if `A = [2 3 3 1 1]` and `B = [3 3 3 1]`,
+    * then `A setDifference B = [1]`.
     */
   def setDifference(m: MSet[M, A])(implicit M: MRealm[M],
                                    E: Eq[M]): MSet[M, A] =
@@ -308,9 +336,12 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
           Applicative[F].map2(_, f(a))((x, y) => x insert y))
     }
   }
+
 }
 
 object MSet {
+
+  def apply[A,M](elements: (A, M)*): MSet[M,A] = new MSet(Map(elements :_*))
 
   type Multiset[A] = MSet[Natural, A]
   type RatBag[A] = MSet[Rational, A]
