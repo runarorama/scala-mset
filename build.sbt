@@ -1,7 +1,7 @@
 inThisBuild(
   List(
     organization := "com.higher-order",
-    scalaVersion := "2.13.1"
+    scalaVersion := "2.12.11"
   )
 )
 
