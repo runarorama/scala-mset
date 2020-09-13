@@ -6,7 +6,6 @@ import  spire.std.LongAlgebra
 import  spire.std.boolean.BooleanStructure
 import  spire.std.int.IntAlgebra
 import  spire.std.long.LongAlgebra
-import  spire.std.tuples._
 import  algebra.lattice.DistributiveLattice
 import  algebra.lattice.{JoinSemilatticeFunctions, MeetSemilatticeFunctions}
 import  spire.algebra.Eq
@@ -14,7 +13,6 @@ import  spire.algebra.EuclideanRing
 import  spire.algebra.Rig
 import  spire.algebra.Ring
 import  cats.kernel.PartialOrderFunctions
-import  cats.kernel.instances.set._
 import  scala.language.higherKinds
 import  spire.math.NaturalAlgebra
 import  algebra.ring._
