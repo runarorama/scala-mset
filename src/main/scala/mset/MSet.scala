@@ -2,25 +2,15 @@ package mset
 
 import cats.Applicative
 import cats.Monad
-import spire.std.MapMonoid
-import spire.std.long._
 import spire.std.map._
-import spire.std.seq._
-import spire.std.tuples._
 import spire.algebra.AdditiveGroup
 import spire.algebra.AdditiveMonoid
-import spire.algebra.AdditiveSemigroup
 import spire.algebra.Eq
-import spire.algebra.EuclideanRing
-import spire.algebra.Group
 import spire.algebra.Monoid
 import spire.algebra.MultiplicativeMonoid
 import spire.algebra.MultiplicativeSemigroup
-import spire.algebra.Order
 import spire.algebra.PartialOrder
-import spire.algebra.Rig
 import spire.algebra.Ring
-import spire.algebra.TruncatedDivision
 import spire.algebra.lattice.JoinSemilattice
 import spire.algebra.lattice.MeetSemilattice
 import spire.math._
@@ -328,7 +318,6 @@ class MSet[M, A](private val rep: Map[A, M]) extends AnyVal {
         val x = f(a)
         iterate(x, n - 1)(f)
       }
-    import cats.implicits._
     val F = Applicative[F]
     E(this).foldLeft(F.pure(empty[Natural, B])) {
       case (acc, (a, m)) =>

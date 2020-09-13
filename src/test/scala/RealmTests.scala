@@ -3,11 +3,7 @@ package mset
 import scalaprops._
 import scalaprops.Gen._
 import scalaprops.Property._
-import spire.algebra.AdditiveMonoid
-import spire.algebra.AdditiveSemigroup
 import spire.math.Natural
-import spire.syntax.eq._
-import scalaz.std.string._
 
 object RealmTests extends Scalaprops {
   import Realm._
