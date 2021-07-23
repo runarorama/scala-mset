@@ -1,6 +1,5 @@
 package mset
 
-import mset.Realm._
 import scalaprops._
 import scalaprops.Gen._
 import scalaprops.Property._
@@ -35,7 +34,7 @@ object MSetTests extends Scalaprops {
   }
 
   val toList = forAll { (xs: List[Int]) =>
-    MSet.fromSeq[Nat,Int](xs).toList(identity).sorted == xs.sorted
+    MSet.fromSeq[Nat,Int](xs).toList.sorted == xs.sorted
   }
 
   val product = forAll { (m1: MSet[Int,Int], m2: MSet[Int,Int]) =>
